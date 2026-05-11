@@ -1,0 +1,258 @@
+name: Mahesh Kubernetes Cluster Provisioning
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: "Choose cloud provider (gcp/digitalocean/both)"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - gcp
+          - digitalocean
+          - both
+      action:
+        description: "Choose an action: apply or destroy"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
+
+env:
+  TF_GCP_DIR: ./terraform/gcp-mahesh
+  TF_DO_DIR: ./terraform/digitalocean-mahesh
+  TF_VAR_digitalocean_token: ${{ secrets.MAHESH_DIGITALOCEAN_ACCESS_TOKEN }}
+
+jobs:
+  provision-cluster:
+    name: Provision Kubernetes Cluster
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.provider != 'both' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Set working directory
+        id: setdir
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            echo "dir=${{ env.TF_GCP_DIR }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=${{ env.TF_DO_DIR }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ==== GCP AUTH BEFORE INIT ====
+      - name: Authenticate to GCP
+        if: ${{ github.event.inputs.provider == 'gcp' }}
+        uses: google-github-actions/auth@v2  # Updated to v2
+        with:
+          credentials_json: ${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}
+
+      - name: Set GCP Project
+        if: ${{ github.event.inputs.provider == 'gcp' }}
+        run: |
+          gcloud config set project concrete-detection-1-491711
+          echo "GOOGLE_CREDENTIALS=${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}" | terraform env new gcp
+
+      # ==== INIT FIRST ====
+      - name: Terraform Init
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
+            terraform init -input=false \
+              -backend-config="access_key=${{ secrets.MAHESH_DO_ACCESS_KEY_ID }}" \
+              -backend-config="secret_key=${{ secrets.MAHESH_DO_SECRET_ACCESS_KEY }}"
+          else
+            terraform init -input=false
+          fi
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      # ==== Terraform Plan/Apply ====
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      - name: Terraform Plan
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+            terraform plan -out=tfplan
+          else
+            terraform plan -destroy -out=tfplan
+          fi
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      # ==== Print cluster connect URL after apply (GCP only) ====
+      - name: Output cluster connect command
+        if: ${{ github.event.inputs.action == 'apply' && github.event.inputs.provider == 'gcp' }}
+        run: |
+          echo "============================================"
+          echo "  GKE Cluster Connect Command"
+          echo "============================================"
+          echo "gcloud container clusters get-credentials crack-detection-cluster --zone us-central1-a --project ${{ vars.MAHESH_GCP_PROJECT }}"
+          echo "============================================"
+
+      # ==== Delete SSL certificates on destroy (GCP only) ====
+      - name: Delete all SSL certificates
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
+        run: |
+          GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
+          echo "Fetching all SSL certificates..."
+          CERTS=$(gcloud compute ssl-certificates list --project=$GCP_PROJECT --format="value(name)" 2>/dev/null || true)
+          if [[ -z "$CERTS" ]]; then
+            echo "No SSL certificates found, nothing to delete."
+          else
+            echo "Deleting SSL certificates: $CERTS"
+            echo "$CERTS" | xargs -I {} gcloud compute ssl-certificates delete {} --project=$GCP_PROJECT --quiet
+            echo "All SSL certificates deleted."
+          fi
+
+      # ==== Delete static IP on destroy (GCP only) ====
+      - name: Delete global static IP
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
+        run: |
+          IP_NAME="concrete-detection-ip"
+          GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
+          echo "Checking if static IP '$IP_NAME' exists..."
+          EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
+          if [[ -n "$EXISTING_IP" ]]; then
+            echo "Deleting static IP '$IP_NAME' ($EXISTING_IP)..."
+            gcloud compute addresses delete $IP_NAME --global --project=$GCP_PROJECT --quiet
+            echo "Static IP deleted."
+          else
+            echo "Static IP '$IP_NAME' not found, nothing to delete."
+          fi
+
+      - name: Cleanup tfplan
+        if: always()
+        run: rm -f tfplan
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+  provision-both:
+    name: Provision Both Clusters
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.provider == 'both' }}
+    strategy:
+      matrix:
+        provider: ["gcp", "digitalocean"]
+      fail-fast: false
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Set working directory
+        id: setdir
+        run: |
+          if [[ "${{ matrix.provider }}" == "gcp" ]]; then
+            echo "dir=${{ env.TF_GCP_DIR }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=${{ env.TF_DO_DIR }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ==== GCP AUTH BEFORE INIT (for GCP matrix) ====
+      - name: Authenticate to GCP
+        if: ${{ matrix.provider == 'gcp' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}
+
+      - name: Set GCP Project
+        if: ${{ matrix.provider == 'gcp' }}
+        run: |
+          gcloud config set project ${{ secrets.MAHESH_GCP_PROJECT_ID }}
+
+      # ==== INIT FIRST ====
+      - name: Terraform Init
+        run: |
+          if [[ "${{ matrix.provider }}" == "digitalocean" ]]; then
+            terraform init -input=false \
+              -backend-config="access_key=${{ secrets.MAHESH_DO_ACCESS_KEY_ID }}" \
+              -backend-config="secret_key=${{ secrets.MAHESH_DO_SECRET_ACCESS_KEY }}"
+          else
+            terraform init -input=false
+          fi
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      # ==== DigitalOcean Auth (for DO matrix) ====
+      - name: DigitalOcean Auth
+        if: ${{ matrix.provider == 'digitalocean' }}
+        run: |
+          echo "MAHESH_DIGITALOCEAN_ACCESS_TOKEN=${{ secrets.MAHESH_DIGITALOCEAN_ACCESS_TOKEN }}" >> $GITHUB_ENV
+
+      # ==== Terraform Plan/Apply ====
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      - name: Terraform Plan
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+            terraform plan -out=tfplan
+          else
+            terraform plan -destroy -out=tfplan
+          fi
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      # ==== Print cluster connect URL after apply (GCP only) ====
+      - name: Output cluster connect command
+        if: ${{ github.event.inputs.action == 'apply' && matrix.provider == 'gcp' }}
+        run: |
+          echo "============================================"
+          echo "  GKE Cluster Connect Command"
+          echo "============================================"
+          echo "gcloud container clusters get-credentials crack-detection-cluster --zone us-central1-a --project ${{ vars.MAHESH_GCP_PROJECT }}"
+          echo "============================================"
+
+      # ==== Delete SSL certificates on destroy (GCP only) ====
+      - name: Delete all SSL certificates
+        if: ${{ github.event.inputs.action == 'destroy' && matrix.provider == 'gcp' }}
+        run: |
+          GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
+          echo "Fetching all SSL certificates..."
+          CERTS=$(gcloud compute ssl-certificates list --project=$GCP_PROJECT --format="value(name)" 2>/dev/null || true)
+          if [[ -z "$CERTS" ]]; then
+            echo "No SSL certificates found, nothing to delete."
+          else
+            echo "Deleting SSL certificates: $CERTS"
+            echo "$CERTS" | xargs -I {} gcloud compute ssl-certificates delete {} --project=$GCP_PROJECT --quiet
+            echo "All SSL certificates deleted."
+          fi
+
+      # ==== Delete static IP on destroy (GCP only) ====
+      - name: Delete global static IP
+        if: ${{ github.event.inputs.action == 'destroy' && matrix.provider == 'gcp' }}
+        run: |
+          IP_NAME="concrete-detection-ip"
+          GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
+          echo "Checking if static IP '$IP_NAME' exists..."
+          EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
+          if [[ -n "$EXISTING_IP" ]]; then
+            echo "Deleting static IP '$IP_NAME' ($EXISTING_IP)..."
+            gcloud compute addresses delete $IP_NAME --global --project=$GCP_PROJECT --quiet
+            echo "Static IP deleted."
+          else
+            echo "Static IP '$IP_NAME' not found, nothing to delete."
+          fi
+
+      - name: Cleanup tfplan
+        if: always()
+        run: rm -f tfplan
+        working-directory: ${{ steps.setdir.outputs.dir }}

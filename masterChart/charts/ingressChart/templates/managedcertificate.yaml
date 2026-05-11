@@ -1,0 +1,7 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: concrete-gallery-cert
+spec:
+  domains:
+    - mahesh.concretecrackgallery.online

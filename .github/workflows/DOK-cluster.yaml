@@ -1,0 +1,67 @@
+name: DigitalOcean K8s Cluster
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose an action: create or destroy"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
+      branch:
+        description: "Branch to use for Terraform code"
+        required: true
+        default: "DO-cluster"
+
+env:
+  TF_WORKING_DIR: ./terraform
+  TF_VAR_digitalocean_token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+  TF_VAR_DO_bucket_access_key: ${{ secrets.ACCESS_KEY_ID }}
+  TF_VAR_DO_bucket_secret_key: ${{ secrets.SECRET_ACCESS_KEY }}
+
+jobs:
+  terraform:
+    name: Terraform Pipeline
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.7.0
+
+    - name: Initialize Terraform with Backend Configuration
+      run: terraform init -backend-config "bucket=terraform-crack-detection" -backend-config "key=DO-cluster/terraform.tfstate" -backend-config "access_key=${{ env.TF_VAR_DO_bucket_access_key }}" -backend-config "secret_key=${{ env.TF_VAR_DO_bucket_secret_key }}"
+      working-directory: ${{ env.TF_WORKING_DIR }}
+
+    - name: Terraform Validate
+      run: terraform validate
+      working-directory: ${{ env.TF_WORKING_DIR }}
+
+    - name: Terraform Plan
+      if: github.event.inputs.action == 'apply'
+      run: terraform plan
+      working-directory: ${{ env.TF_WORKING_DIR }}
+
+    - name: Terraform Apply
+      if: github.event.inputs.action == 'apply'
+      run: terraform apply -auto-approve
+      working-directory: ${{ env.TF_WORKING_DIR }}
+
+    - name: Terraform Plan Destroy
+      if: github.event.inputs.action == 'destroy'
+      run: terraform plan -destroy
+      working-directory: ${{ env.TF_WORKING_DIR }}
+
+    - name: Terraform Destroy
+      if: github.event.inputs.action == 'destroy'
+      run: terraform destroy -auto-approve
+      working-directory: ${{ env.TF_WORKING_DIR }}

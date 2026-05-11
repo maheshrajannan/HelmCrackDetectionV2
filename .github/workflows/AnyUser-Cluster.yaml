@@ -1,0 +1,231 @@
+name: Any User Create Kubernetes Cluster
+
+# ============================================================
+# HOW TO USE THIS PIPELINE
+# ============================================================
+# GCP users:
+#   1. Get your service account JSON key file
+#   2. Base64 encode it into a SINGLE LINE (no line breaks):
+#      Linux:   base64 -w 0 key.json
+#      Mac:     base64 -i key.json | tr -d '\n'
+#      Windows: [Convert]::ToBase64String([IO.File]::ReadAllBytes("key.json"))
+#   3. Paste the single-line output into gcp_sa_key_base64 input
+#
+# DigitalOcean users:
+#   1. Get your API token from https://cloud.digitalocean.com/account/api/tokens
+#   2. Fill in the DO inputs below when triggering the workflow
+# ============================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      # ---- Common ----
+      provider:
+        description: "Cloud provider to use"
+        required: true
+        default: "gcp"
+        type: choice
+        options:
+          - gcp
+          - digitalocean
+
+      action:
+        description: "Apply = create cluster | Destroy = delete cluster"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
+
+      # ---- GCP inputs (fill these if provider = gcp) ----
+      gcp_project_id:
+        description: "[GCP] Your GCP project ID  e.g. my-project-123"
+        required: false
+        type: string
+
+      gcp_sa_key_base64:
+        description: "[GCP] SA key base64 single-line. Linux: base64 -w 0 key.json | Mac: base64 -i key.json | tr -d '\\n'"
+        required: false
+        type: string
+
+      gcp_cluster_name:
+        description: "[GCP] Name for the GKE cluster"
+        required: false
+        default: "crack-detection-cluster"
+        type: string
+
+      gcp_cluster_zone:
+        description: "[GCP] Zone for the GKE cluster  e.g. us-central1-a"
+        required: false
+        default: "us-central1-a"
+        type: string
+
+      gcp_terraform_dir:
+        description: "[GCP] Terraform directory to use  e.g. ./terraform/gcp-mahesh"
+        required: false
+        default: "./terraform/gcp-mahesh"
+        type: string
+
+      # ---- DigitalOcean inputs (fill these if provider = digitalocean) ----
+      do_token:
+        description: "[DO] DigitalOcean API token"
+        required: false
+        type: string
+
+      do_access_key:
+        description: "[DO] Spaces access key (Terraform backend)"
+        required: false
+        type: string
+
+      do_secret_key:
+        description: "[DO] Spaces secret key (Terraform backend)"
+        required: false
+        type: string
+
+      do_terraform_dir:
+        description: "[DO] Terraform directory to use  e.g. ./terraform/digitalocean-mahesh"
+        required: false
+        default: "./terraform/digitalocean-mahesh"
+        type: string
+
+jobs:
+  provision-cluster:
+    name: Provision Kubernetes Cluster
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate required inputs
+        run: |
+          PROVIDER="${{ github.event.inputs.provider }}"
+          if [[ "$PROVIDER" == "gcp" ]]; then
+            [[ -z "${{ github.event.inputs.gcp_project_id }}" ]]  && echo "ERROR: gcp_project_id is required"  && exit 1
+            [[ -z "${{ github.event.inputs.gcp_sa_key_base64 }}" ]] && echo "ERROR: gcp_sa_key_base64 is required" && exit 1
+            echo "GCP inputs validated."
+          fi
+          if [[ "$PROVIDER" == "digitalocean" ]]; then
+            [[ -z "${{ github.event.inputs.do_token }}" ]] && echo "ERROR: do_token is required" && exit 1
+            echo "DigitalOcean inputs validated."
+          fi
+
+      - name: Set working directory
+        id: setdir
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            echo "dir=${{ github.event.inputs.gcp_terraform_dir }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=${{ github.event.inputs.do_terraform_dir }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      # ==== GCP Auth ====
+      - name: Decode and authenticate to GCP
+        if: ${{ github.event.inputs.provider == 'gcp' }}
+        env:
+          GCP_SA_KEY_BASE64: ${{ github.event.inputs.gcp_sa_key_base64 }}
+        run: |
+          echo "$GCP_SA_KEY_BASE64" | tr -d '\n' | base64 -d > $HOME/gcp-key.json
+          gcloud auth activate-service-account --key-file=$HOME/gcp-key.json
+          gcloud config set project ${{ github.event.inputs.gcp_project_id }}
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json" >> $GITHUB_ENV
+
+      - name: Install gke-gcloud-auth-plugin
+        if: ${{ github.event.inputs.provider == 'gcp' }}
+        run: |
+          echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee /etc/apt/sources.list.d/google-cloud-sdk.list
+          curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+          sudo apt-get update -y
+          sudo apt-get install -y google-cloud-cli-gke-gcloud-auth-plugin
+
+      # ==== Terraform Init ====
+      - name: Terraform Init (GCP)
+        if: ${{ github.event.inputs.provider == 'gcp' }}
+        run: terraform init -input=false
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      - name: Terraform Init (DigitalOcean)
+        if: ${{ github.event.inputs.provider == 'digitalocean' }}
+        env:
+          TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
+        run: |
+          terraform init -input=false \
+            -backend-config="access_key=${{ github.event.inputs.do_access_key }}" \
+            -backend-config="secret_key=${{ github.event.inputs.do_secret_key }}"
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      # ==== Terraform Plan / Apply / Destroy ====
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      - name: Terraform Plan
+        env:
+          TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
+        run: |
+          if [[ "${{ github.event.inputs.action }}" == "apply" ]]; then
+            terraform plan -out=tfplan
+          else
+            terraform plan -destroy -out=tfplan
+          fi
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
+        run: terraform apply -auto-approve tfplan
+        working-directory: ${{ steps.setdir.outputs.dir }}
+
+      # ==== Post-apply: print connect command ====
+      - name: Output cluster connect command
+        if: ${{ github.event.inputs.action == 'apply' && github.event.inputs.provider == 'gcp' }}
+        run: |
+          echo "============================================"
+          echo "  GKE Cluster Connect Command"
+          echo "============================================"
+          echo "gcloud container clusters get-credentials ${{ github.event.inputs.gcp_cluster_name }} --zone ${{ github.event.inputs.gcp_cluster_zone }} --project ${{ github.event.inputs.gcp_project_id }}"
+          echo "============================================"
+
+      # ==== Post-destroy: delete SSL certificates ====
+      - name: Delete all SSL certificates
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
+        run: |
+          GCP_PROJECT="${{ github.event.inputs.gcp_project_id }}"
+          echo "Fetching all SSL certificates..."
+          CERTS=$(gcloud compute ssl-certificates list --project=$GCP_PROJECT --format="value(name)" 2>/dev/null || true)
+          if [[ -z "$CERTS" ]]; then
+            echo "No SSL certificates found, nothing to delete."
+          else
+            echo "Deleting SSL certificates: $CERTS"
+            echo "$CERTS" | xargs -I {} gcloud compute ssl-certificates delete {} --project=$GCP_PROJECT --quiet
+            echo "All SSL certificates deleted."
+          fi
+
+      # ==== Post-destroy: delete static IP ====
+      - name: Delete global static IP
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
+        run: |
+          IP_NAME="concrete-detection-ip"
+          GCP_PROJECT="${{ github.event.inputs.gcp_project_id }}"
+          EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
+          if [[ -n "$EXISTING_IP" ]]; then
+            echo "Deleting static IP '$IP_NAME' ($EXISTING_IP)..."
+            gcloud compute addresses delete $IP_NAME --global --project=$GCP_PROJECT --quiet
+            echo "Static IP deleted."
+          else
+            echo "Static IP '$IP_NAME' not found, skipping."
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f tfplan
+          rm -f $HOME/gcp-key.json
+        working-directory: ${{ steps.setdir.outputs.dir }}

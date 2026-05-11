@@ -1,0 +1,72 @@
+name: Mahesh DO LitmusChaos Install
+
+on:
+  workflow_dispatch:
+
+jobs:
+  install-litmus-chaos:
+    name: Install LitmusChaos on DOKS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up doctl (DigitalOcean CLI)
+      - name: Install doctl
+        run: |
+          curl -sL https://github.com/digitalocean/doctl/releases/download/v1.97.0/doctl-1.97.0-linux-amd64.tar.gz | tar -xz
+          sudo mv doctl /usr/local/bin/
+
+      - name: Authenticate with DigitalOcean
+        run: |
+          doctl auth init -t ${{ secrets.MAHESH_DIGITALOCEAN_ACCESS_TOKEN }}
+
+      # Configure kubectl to connect to the DOKS cluster
+      - name: Configure kubectl
+        run: |
+          doctl kubernetes cluster kubeconfig save crack-detection-cluster
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Create litmus namespace
+        run: |
+          kubectl create ns litmus || true
+
+      - name: Add LitmusChaos Helm repo
+        run: |
+          helm repo add litmuschaos https://litmuschaos.github.io/litmus-helm/ || true
+          helm repo update
+
+      - name: Install LitmusChaos via Helm
+        run: |
+          helm upgrade --install litmus litmuschaos/litmus -n litmus \
+            --set portal.server.resources.requests.cpu=100m \
+            --set portal.server.resources.requests.memory=256Mi \
+            --set portal.frontend.service.type=LoadBalancer \
+            --set portal.server.service.type=LoadBalancer
+
+      - name: Apply LitmusChaos Portal CRDs
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/litmuschaos/litmus/master/mkdocs/docs/3.21.0/litmus-portal-crds.yml
+
+      - name: Get LitmusChaos Portal URL
+        run: |
+          echo "======================================================"
+          echo "  Waiting for LitmusChaos frontend LoadBalancer IP..."
+          echo "======================================================"
+          for i in {1..20}; do
+            LITMUS_IP=$(kubectl get svc litmus-frontend-service -n litmus -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+            if [[ -n "$LITMUS_IP" ]]; then
+              echo "LitmusChaos Portal: http://$LITMUS_IP:9091"
+              break
+            fi
+            echo "Waiting... ($i/20)"
+            sleep 15
+          done
+          if [[ -z "$LITMUS_IP" ]]; then
+            echo "LoadBalancer IP not yet assigned. Check manually: kubectl get svc -n litmus"
+          fi
+          echo "======================================================"
