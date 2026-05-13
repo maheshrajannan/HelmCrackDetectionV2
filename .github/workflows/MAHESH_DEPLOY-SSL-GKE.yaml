@@ -1,6 +1,7 @@
 name: Mahesh-GKE-SSL-deploy crack detection 
 
 # Triggered manually from the GitHub Actions tab
+
 on:
   workflow_dispatch:
 
