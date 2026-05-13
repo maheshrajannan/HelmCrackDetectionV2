@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
 
-      # ---- Common ----
+      # Common 
       provider:
         description: "Cloud provider to use"
         required: true
