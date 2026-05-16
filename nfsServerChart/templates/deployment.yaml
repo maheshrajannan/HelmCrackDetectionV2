@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,11 +39,6 @@ spec:
 
 
 
-
-
-
-
-
 # apiVersion: apps/v1
 # kind: Deployment
 # metadata:
@@ -59,7 +55,7 @@ spec:
 #     spec:
 #       containers:
 #       - name: nfs-server
-#         image: itsthenetwork/nfs-server-alpine:latest
+#         image: gcr.io/google_containers/volume-nfs:0.8
 #         ports:
 #           - name: nfs
 #             containerPort: 2049
@@ -69,13 +65,10 @@ spec:
 #             containerPort: 111
 #         securityContext:
 #           privileged: true
-#         env:
-#           - name: SHARED_DIRECTORY
-#             value: "/export"
 #         volumeMounts:
-#           - mountPath: /export
+#           - mountPath: /exports
 #             name: mypvc
 #       volumes:
 #         - name: mypvc
 #           persistentVolumeClaim:
-#             claimName: mypvc
+#           claimName: mypvc

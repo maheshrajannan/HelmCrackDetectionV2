@@ -12,9 +12,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- toYaml .Values.labels | nindent 8 }}
-      annotations:
-        litmuschaos.io/chaos: "true"
+        app: crack-detection-pod
     spec:
       volumes:
         - name: concrete-images-pv-nfs
@@ -23,7 +21,7 @@ spec:
       containers:
         - name: crack-detection-pod
           image: "{{ .Values.global.crackDetectionImage }}"
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           volumeMounts:
             - mountPath: "/app/uploads/images"
               name: concrete-images-pv-nfs

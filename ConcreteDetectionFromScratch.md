@@ -1,6 +1,6 @@
-# 🚀 Crack Detection App Infrastructure Deployment on GCP
+# 🚀 Crack Detection App Infrastructure Deployment on DigitalOcean
 
-This project provides a complete setup for provisioning infrastructure on **Google Cloud Platform (GCP)** using **Terraform** and **GitHub Actions**. It includes steps to create a service account, enable required APIs, and deploy a Kubernetes cluster for the Crack Detection application.
+This project provides a complete setup for provisioning infrastructure on **DigitalOcean** using **Terraform** and **GitHub Actions**. It includes steps to create a DigitalOcean project, set up API tokens, and deploy a Kubernetes cluster for the Crack Detection application.
 
 ---
 
@@ -10,128 +10,152 @@ Before running the GitHub Action pipelines, **complete the following steps manua
 
 ---
 
-## 1️⃣ Create GCP Project
+## 1️⃣ Create DigitalOcean Account and Project
 
-#### For detailed instructions and screenshots, see [GCP Project Setup Guide](/gCloudDockerSetup.md#installing-gcloud).
+1. Go to the [DigitalOcean website](https://cloud.digitalocean.com/) and sign up by adding your credit card details, if you don't have an account.
+2. Once logged in, navigate to the **Projects** section in the left sidebar.
+3. Click **Create Project**.
+4. Name your project (e.g., `concrete-detection`) and click **Create**.
+5. **Note down the Project ID** for use in GitHub Secrets.
+![digital ocean project](docScreenshots/1-DO-project.png)
 
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Click on **Project Selector (top bar)** → **New Project**.
-3. Name your project (e.g., `concrete-detection`) and click **Create**.
-4. **Note down the Project ID** for use in GitHub Secrets.
 ---
 
-## 2️⃣ Create Service Account
+## 2️⃣ Generate DigitalOcean API Token
 
-📷 **Screenshot:** Show the service account list after creation.
-
-1. Navigate to **IAM & Admin → Service Accounts**.
-![Service Account Screenshot](docScreenshots/1-gcloudmenu-IAM.png)
-2. Click **Create Service Account**.
-   - **Name:** `empowerinnovate-sa`
-   - **ID:** `empowerinnovate-sa`
-3. Click **Create and Continue**.
-4. Assign roles:
-   - `Owner`
-   - `Service Usage Admin`
-   - `Project IAM Admin`
-   - `Service Account Admin`
-   - `Service Account Key Admin`
-5. Click **Done**.
+1. Click on bottom-left corner and select **API**.
+2. Click **Generate New Token**.
+3. Name your token (e.g., `terraform-cicd`).
+4. Select **Write** access level.
+5. Click **Generate Token**.
+6. **Important**: Copy the token and save it securely. You won't be able to see it again.
 
 ✅ **Expected Output:**  
-Service account created and visible:  
-![Service Account Screenshot](docScreenshots/2-creating-sa.png)
-![Service Account role assigned](docScreenshots/3-assign-role.png)
+A new API token is generated and displayed (only once).
+![digital ocean API token](docScreenshots/2-DO-API-token.png)
+
 ---
 
-## 3️⃣ Create & Download Service Account Key
+## 3️⃣ Create Spaces Bucket for Terraform State
 
-📷 **Screenshot:** Show download dialog and final JSON key file saved locally.
-
-1. Go to **IAM & Admin → Service Accounts** → Select `empowerinnovate-sa`.
-2. Go to the **Keys** tab → **Add Key → Create New Key** → Select **JSON**.
-3. Click **Create** and save the JSON file.
+1. In the DigitalOcean dashboard, go to **Spaces** in the left sidebar.
+2. Click **Create Spaces Bucket**.
+3. Choose a globally unique name (e.g., `crack-detection-tfstate`).
+4. Select the region closest to your users.
+5. Click **Create a Space**.
 
 ✅ **Expected Output:**  
-JSON file downloaded:  
-![Download Key Screenshot](docScreenshots/4-create-key.png)
-![Download Key Screenshot](docScreenshots/5-key-in-json.png)
+A new Spaces bucket is created and visible in your Spaces dashboard.
+![digital ocean bucket](docScreenshots/3-DO-bucket.png)
 ---
 
-## 4️⃣ Create Google Cloud Storage
+## 4️⃣ Create Spaces Access Keys
 
-Navigate to **Cloud Storage → bucket** and create the following bucket:
+1. In the DigitalOcean dashboard, go to **Spaces Access Keys**.
+2. Click **Generate New Key**.
+3. Give it a name (e.g., `terraform-spaces-key`).
+4. Click **Generate Key**.
+5. **Important**: Save both the Key and Secret securely.
 
-- `crack-detection-terraform`
- 
 ✅ **Expected Output:**  
-📷 **Screenshot:** Show Bucket in the Cloud Storage dashboard.
-![Cloud Storage Screenshot](docScreenshots/12-cloud-storage.png)
-
+A new Spaces access key pair is generated and displayed (only once).
+![digital ocean bucket](docScreenshots/4-DO-bucket-access-key-secret.png)
 ---
 
 ## 5️⃣ Add Secrets to GitHub
 
-📷 **Screenshot:** Show GitHub secrets UI with masked value input.
-
 Go to your GitHub repo → **Settings → Secrets and variables → Actions** → **New repository secret**:
-![github secret list](docScreenshots/secret-list.png)
 
 | Secret Name                | Value (Example)                          |
 |---------------------------|------------------------------------------|
-| `GCP_PROJECT_ID`          | `concrete-detection-6-461512`            |
-| `GCP_SERVICE_ACCOUNT_KEY` | Paste content of the JSON key securely   |
+| `DIGITALOCEAN_TOKEN`      | Your DigitalOcean API token              |
+| `SPACES_ACCESS_KEY_ID`    | Your Spaces Access Key                   |
+| `SPACES_SECRET_ACCESS_KEY`| Your Spaces Secret Key                  |
+| `TF_VAR_do_token`         | Same as DIGITALOCEAN_TOKEN               |
+| `TF_VAR_spaces_access_id` | Same as SPACES_ACCESS_KEY_ID             |
+| `TF_VAR_spaces_secret_key`| Same as SPACES_SECRET_ACCESS_KEY         |
+| `TF_VAR_cluster_name`     | `crack-detection-cluster`                |
+| `TF_VAR_region`           | `nyc3` (or your preferred region)        |
 
-🔐 **Note:** No need to base64 encode. GitHub will mask this automatically.
+🔐 **Note:** Keep all secrets secure and never commit them to version control.
 
 ✅ **Expected Output:**  
-Secrets added successfully:  
-![github secret list](docScreenshots/secret-creation.png)
+All secrets are added to your GitHub repository settings.
 
 ---
 
-## 6️⃣ Run GitHub Action: Create App-Specific Service Account
-
-📷 **Screenshot:** Show GitHub Action being triggered and running.
+## 6️⃣ Run GitHub Action: Provision Infrastructure
 
 This GitHub Action pipeline will:
 
-- Create **App-specific Service Account**
-- Assign necessary IAM roles
+- Initialize Terraform
+- Create a DigitalOcean Kubernetes (DOKS) cluster
+- Configure necessary resources
 
 ✅ **How to Trigger:**  
-Push any changes to the `main` branch or use the **"Run Workflow"** button on GitHub.
+Push any changes to the `master` branch or use the **"Run Workflow"** button on GitHub.
+![digital ocean pipeline](docScreenshots/5-DO-gitlab-CI-workflow.png)
 
 ✅ **Expected Output:**  
-Pipeline starts and completes successfully:  
-![GitHub Action Run Screenshot](docScreenshots/6-create-sa-CICD.png)
-![GitHub Action Run Screenshot](docScreenshots/7-create-sa-CICD-done.png)
+Pipeline starts and completes successfully, showing the creation of all resources.
+![digital ocean pipeline](docScreenshots/6-DO-gitlab-CI-log.png)
 
-✅ **Verify in GCP:**  
-App-specific service account will be visible under **IAM & Admin → Service Accounts**:  
-![GCP SA Created Screenshot](docScreenshots/8-app-specific-sa.png)
+✅ **Verify in DigitalOcean Dashboard:**  
+- Go to **Kubernetes** to see your new cluster
+- Check **Load Balancers** for any created load balancers
+- Verify **Volumes** if any persistent storage was created
+![digital ocean dashboard](docScreenshots/7-DO-k8s-dashboard.png)
 
-Now follow same [step 3](https://github.com/EmpowerInnovate/HelmCrackDetetion/blob/master/ConcreteDetectionFromScratch.md#3%EF%B8%8F%E2%83%A3-create--download-service-account-key) for this newly created service account.
 ---
 
-## 7️⃣ Terraform: Provision GKE Cluster
+## 7️⃣ Access Your Kubernetes Cluster
 
-📷 **Screenshot:** Show Terraform provisioning logs from GitHub Actions and GKE dashboard.
+1. Install `doctl` (DigitalOcean CLI) locally:
+   ```bash
+   # For macOS (using Homebrew)
+   brew install doctl
+   
+   # For Linux (using snap)
+   sudo snap install doctl --classic
+   ```
 
-The GitHub Action will now run Terraform code to:
+2. Authenticate with DigitalOcean:
+   ```bash
+   doctl auth init
+   # Follow the prompts to authenticate
+   ```
 
-- Provision a **GKE Cluster**
-- Configure node pools
-- Set up basic networking
+3. Get your Kubernetes config:
+   ```bash
+   doctl kubernetes cluster kubeconfig save crack-detection-cluster
+   ```
+
+4. Verify access:
+   ```bash
+   kubectl get nodes
+   ```
+
+## 8️⃣ Deploy Application Using GitHub Actions
+
+Now that our Kubernetes cluster is ready, let's set up the GitHub Actions workflow to deploy our application.
+
+1. **Let's run the GitHub action pipeline**
+   - In your GitHub repository, go to **Settings → Actions**
+   ![deploy DOK pipeline](docScreenshots/8-DOK-deploy.png)
+   - See the pipeline logs
+   ![deploy DOK pipeline log](docScreenshots/9-DOK-deploy-log.png)
 
 ✅ **Expected Output:**  
-Pipeline logs showing successful GKE creation:  
-![Terraform Logs Screenshot](docScreenshots/9-gke-cluster-pipeline.png)
-![Terraform GKE logs](docScreenshots/10-gke-cluster-pipeline-log.png)
+- The GitHub Actions workflow will start automatically
+- You'll see the deployment progress in the **Actions** tab
+- Once completed, your application will be deployed to the Kubernetes cluster
 
-✅ **Verify in GCP:**  
-GKE Cluster appears in GCP Console → **Kubernetes Engine → Clusters**:  
-![Terraform GKE logs](docScreenshots/11-gke-cluster-ui.png)
+✅ **Verify in Kubernetes Cluster:**  
+```bash
+kubectl get pods
+kubectl get services
+kubectl get ingress
+```
 
 ---
 
@@ -139,9 +163,34 @@ GKE Cluster appears in GCP Console → **Kubernetes Engine → Clusters**:
 
 ```mermaid
 graph LR
-A[Create GCP Project] --> B[Create Service Account]
-B --> C[Enable APIs]
-C --> D[Download & Add Key to GitHub]
-D --> E[Run GitHub Action]
-E --> F[Create App-Specific SA]
-F --> G[Terraform Provisions GKE]
+A[Create DigitalOcean Account] --> B[Generate API Token]
+B --> C[Create Spaces Bucket]
+C --> D[Create Spaces Access Keys]
+D --> E[Add Secrets to GitHub]
+E --> F[Run GitHub Action]
+F --> G[Terraform Provisions DOKS Cluster]
+G --> H[Set Up GitHub Actions for App Deployment]
+H --> I[Application Deployed to Kubernetes]
+```
+
+## 🔧 Troubleshooting
+
+- **Cluster Creation Fails**: Check your DigitalOcean account limits and billing status.
+- **Terraform State Issues**: Verify the Spaces bucket name and credentials.
+- **Kubernetes Access Problems**: Ensure `kubectl` is properly configured with the correct context.
+
+## 📚 Additional Resources
+
+- [DigitalOcean Kubernetes Documentation](https://docs.digitalocean.com/products/kubernetes/)
+- [Terraform DigitalOcean Provider](https://registry.terraform.io/providers/digitalocean/digitalocean/latest/docs)
+- [DigitalOcean API Documentation](https://docs.digitalocean.com/reference/api/)
+
+---
+
+## 👥 Support
+
+For any issues or questions, please open an issue in the repository or contact the maintainers.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

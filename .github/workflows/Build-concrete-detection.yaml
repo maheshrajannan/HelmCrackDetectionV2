@@ -3,8 +3,7 @@ name: Build and push docker images
 on:
   push:
     branches:
-      - master
-      - slownessFix
+      - DO-SSL
   workflow_dispatch: # Enables manual trigger from the GitHub Actions tab
 jobs:
   build-and-push:

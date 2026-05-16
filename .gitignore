@@ -1,9 +1,6 @@
-# Terraform
-**/.terraform/
-**/.terraform.*
-*.tfstate
-*.tfstate.*
-*.tfstate.lock.*
-
-# Credentials - but NOT blocking .tf files
-**/gha-creds-*.json
+terraform/.terraform
+terraform/.terraform.*
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfstate.lock.*
+terraform/*.json

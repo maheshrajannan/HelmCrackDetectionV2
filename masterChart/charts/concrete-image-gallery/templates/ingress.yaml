@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: concrete-gallery-ingress
+  annotations:
+    # kubernetes.io/ingress.class: "nginx"
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # acme.cert-manager.io/http01-edit-in-place: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - mahesh.concretecrackgallery.in
+      secretName: concrete-gallery-tls
+  rules:
+    - host: mahesh.concretecrackgallery.in
+      http:
+        paths:
+          - path: /  ## In the / root path this image gallery app will run
+            pathType: Prefix
+            backend:
+              service:
+                name: concrete-image-gallery-svc-lb ## image-gallery app service name
+                port:
+                  number: 8082
+          - path: /upload ##  In the /upload root path this image upload app will run
+            pathType: Prefix
+            backend:
+              service:
+                name: image-upload-svc-lb
+                port:
+                  number: 8080
+          - path: /uploaded  ## Here also /uploaded endpoint of the image upload app will be run 
+            pathType: Prefix
+            backend:
+              service:
+                name: image-upload-svc-lb ## image-upload app service name
+                port:
+                  number: 8080

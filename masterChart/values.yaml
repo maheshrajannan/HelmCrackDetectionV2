@@ -3,6 +3,8 @@ global:
   crackDetectionImage: maheshrajannan/crack-detection-logic:latest
   concreteGalleryImage: maheshrajannan/concrete-image-gallery-logic:latest
 
+
+
 concrete-image-gallery:
   labels:
     app: concrete-image-gallery-pod
@@ -16,11 +18,7 @@ image-upload:
     app: image-upload-pod
 
 
-
-
-
-
-# repositoryPrefix: empower9090
+# repositoryPrefix: maheshrajannan
 
 # images:
 #   image-upload-image:

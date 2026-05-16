@@ -22,7 +22,6 @@ const PORT = 8080;
 app.use(express.static('public'));
 
 // Add a route for the root path to serve the upload page
-// this is the code whivh is responsible for ingress problem sortout
 app.get("/upload", (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });

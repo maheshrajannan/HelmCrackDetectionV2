@@ -120,7 +120,5 @@ that's it you are good to go with service account.
 
 11. Let us follow the [README.md](README.md#project-overview).
 
-**!Note - Whenever new projects chnage in gcloud then please change DNS nameservers as well in hostinger host.**
-
 
 ## Thank you... :)

@@ -8,13 +8,11 @@ spec:
   selector:
     matchLabels:
       app: image-upload-pod
-  replicas: 1 
+  replicas: 1
   template:
     metadata:
       labels:
-        {{- toYaml .Values.labels | nindent 8 }}
-      annotations:
-        litmuschaos.io/chaos: "true"
+        app: image-upload-pod
     spec:
       volumes:
         - name: concrete-images-pv-nfs
