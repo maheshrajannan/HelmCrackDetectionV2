@@ -1,3 +1,0 @@
-s3_access_key = "DO00VQ9J4UX4J4T3HKAY"
-s3_secret_key = "Rj9MyRPCGo/WQfXkAb9UBkqiVa8SjaEt0X9gq+9fBWg"
-digitalocean_token = "dop_v1_553665395661aad8241898d07115a933aa543c46dae7319613dae28cd36d4e98"
