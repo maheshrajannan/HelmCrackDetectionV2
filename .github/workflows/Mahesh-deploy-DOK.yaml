@@ -26,20 +26,20 @@ jobs:
     - name: Log in to DockerHub
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+        username: ${{ secrets.MAHESH_DOCKER_USERNAME }}
+        password: ${{ secrets.MAHESH_DOCKER_PASSWORD }}
 
     - name: Pull Image Upload Logic
       run: |
-        docker pull ${{ secrets.DOCKER_USERNAME }}/image-upload-logic:latest
+        docker pull ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:latest
 
     - name: Pull Crack Detection Logic
       run: |
-        docker pull ${{ secrets.DOCKER_USERNAME }}/crack-detection-logic:latest
+        docker pull ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:latest
 
     - name: Pull Concrete Image Gallery Logic
       run: |
-        docker pull ${{ secrets.DOCKER_USERNAME }}/concrete-image-gallery-logic:latest
+        docker pull ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:latest
 
     # Set up doctl (DigitalOcean CLI)
     - name: Install doctl
