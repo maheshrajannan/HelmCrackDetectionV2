@@ -19,23 +19,23 @@ jobs:
     - name: Log in to DockerHub
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+        username: ${{ secrets.MAHESH_DOCKER_USERNAME }}
+        password: ${{ secrets.MAHESH_DOCKER_PASSWORD }}
 
     - name: Build and Push Image Upload Logic
       run: |
         cd buildConcreteDetection/imageUpload
-        docker build -f dockerfile -t ${{ secrets.DOCKER_USERNAME }}/image-upload-logic:latest .
-        docker push ${{ secrets.DOCKER_USERNAME }}/image-upload-logic:latest
+        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:latest .
+        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:latest
 
     - name: Build and Push Crack Detection Logic
       run: |
         cd buildConcreteDetection/crackDetection
-        docker build -f dockerfile -t ${{ secrets.DOCKER_USERNAME }}/crack-detection-logic:latest .
-        docker push ${{ secrets.DOCKER_USERNAME }}/crack-detection-logic:latest
+        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:latest .
+        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:latest
 
     - name: Build and Push Concrete Image Gallery Logic
       run: |
         cd buildConcreteDetection/concreteImageGallery
-        docker build -f dockerfile -t ${{ secrets.DOCKER_USERNAME }}/concrete-image-gallery-logic:latest .
-        docker push ${{ secrets.DOCKER_USERNAME }}/concrete-image-gallery-logic:latest
+        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:latest .
+        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:latest
