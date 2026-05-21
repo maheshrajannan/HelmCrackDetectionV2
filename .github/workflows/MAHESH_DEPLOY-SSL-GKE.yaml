@@ -102,13 +102,13 @@ jobs:
         fi
     
         echo "Waiting for ingress IP..."
-        for i in {1..30}; do
+        for i in {1..50}; do
           EXTERNAL_IP=$(kubectl get ingress concrete-gallery-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
           if [[ -n "$EXTERNAL_IP" ]]; then
             echo "Found Ingress IP: $EXTERNAL_IP"
             break
           fi
-          echo "Waiting for IP... ($i/30)"
+          echo "Waiting for IP... ($i/50)"
           sleep 10
         done
     
