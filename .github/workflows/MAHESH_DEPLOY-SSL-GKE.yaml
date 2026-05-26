@@ -9,6 +9,18 @@ on:
         description: "GCP SA key base64 single-line. Linux: base64 -w 0 key.json | Mac: base64 -i key.json | tr -d '\\n'"
         required: true
         type: string
+      gcp_cluster_name:
+        description: "[GCP] GKE cluster name"
+        required: true
+        type: string
+      gcp_cluster_zone:
+        description: "[GCP] GKE cluster zone e.g. us-central1-a"
+        required: true
+        type: string
+      gcp_project_id:
+        description: "[GCP] GCP project ID"
+        required: true
+        type: string
 
 jobs:
   GKE-SSL-deploy-concrete-detection:
@@ -58,9 +70,9 @@ jobs:
     # Step 3: Configure kubectl to connect to the GKE cluster
     - name: Configure kubectl
       run: |
-        gcloud container clusters get-credentials ${{ secrets.MAHESH_GKE_CLUSTER_NAME }} \
-        --zone ${{ secrets.MAHESH_GKE_CLUSTER_ZONE }} \
-        --project ${{ secrets.MAHESH_GCP_PROJECT_ID }}
+        gcloud container clusters get-credentials ${{ github.event.inputs.gcp_cluster_name }} \
+        --zone ${{ github.event.inputs.gcp_cluster_zone }} \
+        --project ${{ github.event.inputs.gcp_project_id }}
 
     # Step 4: Install Helm directly
     - name: Install Helm
@@ -70,7 +82,7 @@ jobs:
     - name: Create global static IP (if not exists)
       run: |
         IP_NAME="concrete-detection-ip"
-        GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
+        GCP_PROJECT="${{ github.event.inputs.gcp_project_id }}"
         echo "Checking if static IP '$IP_NAME' exists..."
         EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
         if [[ -z "$EXISTING_IP" ]]; then
