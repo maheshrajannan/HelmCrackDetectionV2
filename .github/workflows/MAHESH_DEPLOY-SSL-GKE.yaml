@@ -60,6 +60,7 @@ jobs:
       run: |
         echo "$GCP_SA_KEY_BASE64" | tr -d '\n' | base64 -d > $HOME/gcp-key.json
         gcloud auth activate-service-account --key-file=$HOME/gcp-key.json
+        gcloud config set project ${{ github.event.inputs.gcp_project_id }}
         echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json" >> $GITHUB_ENV
 
     # Step 2: Install the gke-gcloud-auth-plugin using gcloud SDK
@@ -106,7 +107,7 @@ jobs:
         DOMAIN_NAME="mahesh.concretecrackgallery.online"
         DNS_ZONE_NAME="concrete-zone"
         TTL=300
-        GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
+        GCP_PROJECT="${{ github.event.inputs.gcp_project_id }}"
     
         # Check if Cloud DNS managed zone exists
         echo "Checking if DNS zone '$DNS_ZONE_NAME' exists..."
