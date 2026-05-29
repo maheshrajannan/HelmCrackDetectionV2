@@ -50,8 +50,8 @@ on:
         required: false
         type: string
 
-      gcp_cluster_name:
-        description: "[GCP] Name for the GKE cluster"
+      cluster_name:
+        description: "Cluster name (GKE or DOKS)"
         required: false
         type: string
 
@@ -182,14 +182,31 @@ jobs:
         run: terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      # ==== Post-apply: print connect command ====
+      # ==== Post-apply: print connect command (GCP) ====
       - name: Output cluster connect command
         if: ${{ github.event.inputs.action == 'apply' && github.event.inputs.provider == 'gcp' }}
         run: |
           echo "============================================"
           echo "  GKE Cluster Connect Command"
           echo "============================================"
-          echo "gcloud container clusters get-credentials ${{ github.event.inputs.gcp_cluster_name }} --zone ${{ github.event.inputs.gcp_cluster_zone }} --project ${{ github.event.inputs.gcp_project_id }}"
+          echo "gcloud container clusters get-credentials ${{ github.event.inputs.cluster_name }} --zone ${{ github.event.inputs.gcp_cluster_zone }} --project ${{ github.event.inputs.gcp_project_id }}"
+          echo "============================================"
+
+      # ==== Post-apply: print connect command (DigitalOcean) ====
+      - name: Install doctl (for DO connect command)
+        if: ${{ github.event.inputs.action == 'apply' && github.event.inputs.provider == 'digitalocean' }}
+        run: |
+          curl -sL https://github.com/digitalocean/doctl/releases/download/v1.97.0/doctl-1.97.0-linux-amd64.tar.gz | tar -xz
+          sudo mv doctl /usr/local/bin/
+
+      - name: Output DOKS cluster connect command
+        if: ${{ github.event.inputs.action == 'apply' && github.event.inputs.provider == 'digitalocean' }}
+        run: |
+          echo "============================================"
+          echo "  DOKS Cluster Connect Command"
+          echo "============================================"
+          echo "doctl auth init -t <YOUR_DO_TOKEN>"
+          echo "doctl kubernetes cluster kubeconfig save ${{ github.event.inputs.cluster_name }}"
           echo "============================================"
 
       # ==== Post-destroy: delete SSL certificates ====
