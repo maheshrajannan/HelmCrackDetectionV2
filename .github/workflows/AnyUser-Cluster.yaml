@@ -50,8 +50,8 @@ on:
         required: false
         type: string
 
-      gcp_cluster_name:
-        description: "[GCP] Name for the GKE cluster"
+      cluster_name:
+        description: "Cluster name (GKE or DOKS)"
         required: false
         type: string
 
@@ -87,11 +87,6 @@ on:
         description: "[DO] Terraform directory to use  e.g. ./terraform/digitalocean-mahesh"
         required: false
         default: "./terraform/digitalocean-mahesh"
-        type: string
-
-      do_cluster_name:
-        description: "[DO] DOKS cluster name (used to print connect command after apply)"
-        required: false
         type: string
 
 jobs:
@@ -194,7 +189,7 @@ jobs:
           echo "============================================"
           echo "  GKE Cluster Connect Command"
           echo "============================================"
-          echo "gcloud container clusters get-credentials ${{ github.event.inputs.gcp_cluster_name }} --zone ${{ github.event.inputs.gcp_cluster_zone }} --project ${{ github.event.inputs.gcp_project_id }}"
+          echo "gcloud container clusters get-credentials ${{ github.event.inputs.cluster_name }} --zone ${{ github.event.inputs.gcp_cluster_zone }} --project ${{ github.event.inputs.gcp_project_id }}"
           echo "============================================"
 
       # ==== Post-apply: print connect command (DigitalOcean) ====
@@ -211,7 +206,7 @@ jobs:
           echo "  DOKS Cluster Connect Command"
           echo "============================================"
           echo "doctl auth init -t <YOUR_DO_TOKEN>"
-          echo "doctl kubernetes cluster kubeconfig save ${{ github.event.inputs.do_cluster_name }}"
+          echo "doctl kubernetes cluster kubeconfig save ${{ github.event.inputs.cluster_name }}"
           echo "============================================"
 
       # ==== Post-destroy: delete SSL certificates ====
