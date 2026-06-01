@@ -31,6 +31,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Print input parameters
+      run: |
+        echo "================================================"
+        echo "  Pipeline Input Parameters"
+        echo "================================================"
+        echo "  gcp_project_id  : ${{ github.event.inputs.gcp_project_id }}"
+        echo "  gcp_cluster_name: ${{ github.event.inputs.gcp_cluster_name }}"
+        echo "  gcp_cluster_zone: ${{ github.event.inputs.gcp_cluster_zone }}"
+        echo "  gcp_sa_key_base64: ${{ github.event.inputs.gcp_sa_key_base64 != '' && '*** provided ***' || 'NOT provided' }}"
+        echo "================================================"
+
     - name: Log in to DockerHub
       uses: docker/login-action@v3
       with:
