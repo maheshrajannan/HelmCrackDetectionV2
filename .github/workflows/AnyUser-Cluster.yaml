@@ -98,6 +98,21 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Print input parameters
+        run: |
+          echo "================================================"
+          echo "  Pipeline Input Parameters"
+          echo "================================================"
+          echo "  provider        : ${{ github.event.inputs.provider }}"
+          echo "  action          : ${{ github.event.inputs.action }}"
+          echo "  cluster_name    : ${{ github.event.inputs.cluster_name }}"
+          echo "  gcp_project_id  : ${{ github.event.inputs.gcp_project_id }}"
+          echo "  gcp_cluster_zone: ${{ github.event.inputs.gcp_cluster_zone }}"
+          echo "  gcp_terraform_dir: ${{ github.event.inputs.gcp_terraform_dir }}"
+          echo "  do_terraform_dir: ${{ github.event.inputs.do_terraform_dir }}"
+          echo "  gcp_sa_key_base64: ${{ github.event.inputs.gcp_sa_key_base64 != '' && '*** provided ***' || 'NOT provided' }}"
+          echo "================================================"
+
       - name: Validate required inputs
         run: |
           PROVIDER="${{ github.event.inputs.provider }}"
