@@ -49,10 +49,22 @@
 
 4. Ensure that gcloud directory is included in the path variable.
 
-5. Enter the `gcloud auth` to authenticate to GCP.
+5. Enter the `gcloud auth login` to authenticate to GCP.
 
 ```
-gcloud auth
+gcloud auth login
+```
+
+5.b AFter login, ensure you can see the pods.
+
+```
+Maheshs-MacBook-Pro-3:keys maheshrajannan$ kubectl get pods
+NAME                                           READY   STATUS    RESTARTS   AGE
+concrete-image-gallery-depl-65f4f7464c-mghkg   1/1     Running   0          52m
+crack-detection-depl-69fc67785d-ht7hl          1/1     Running   0          52m
+image-upload-depl-5cc7848856-tmrtl             1/1     Running   0          52m
+nfs-server-depl-9dcc654bb-22rfc                1/1     Running   0          52m
+
 ```
 
 6. This command will open another browser and ask permission. This will wire the gcloud permission from UI to our local shell.
@@ -63,6 +75,7 @@ gcloud auth
 gcloud init
 ```
 ![Gcloud Init](/docScreenshots/gcloudInit.png)
+
 
 8. Click on `top-left main menu symbol` then scroll. As shown in the image below,
 
