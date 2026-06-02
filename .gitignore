@@ -7,3 +7,5 @@
 
 # Credentials - but NOT blocking .tf files
 **/gha-creds-*.json
+keys
+keys/*
