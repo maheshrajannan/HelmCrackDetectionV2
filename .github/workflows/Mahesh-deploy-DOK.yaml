@@ -31,6 +31,16 @@ jobs:
       with:
         ref: ${{ github.event.inputs.branch }}
 
+    - name: Print input parameters
+      run: |
+        echo "================================================"
+        echo "  Pipeline Input Parameters"
+        echo "================================================"
+        echo "  branch          : ${{ github.event.inputs.branch }}"
+        echo "  cluster_name    : ${{ github.event.inputs.cluster_name }}"
+        echo "  do_token        : ${{ github.event.inputs.do_token != '' && '*** provided ***' || 'NOT provided' }}"
+        echo "================================================"
+
     - name: Log in to DockerHub
       uses: docker/login-action@v3
       with:
