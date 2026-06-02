@@ -110,6 +110,9 @@ jobs:
           echo "  gcp_cluster_zone: ${{ github.event.inputs.gcp_cluster_zone }}"
           echo "  gcp_terraform_dir: ${{ github.event.inputs.gcp_terraform_dir }}"
           echo "  do_terraform_dir: ${{ github.event.inputs.do_terraform_dir }}"
+          echo "  do_token        : ${{ github.event.inputs.do_token != '' && '*** provided ***' || 'NOT provided' }}"
+          echo "  do_access_key   : ${{ github.event.inputs.do_access_key != '' && '*** provided ***' || 'NOT provided' }}"
+          echo "  do_secret_key   : ${{ github.event.inputs.do_secret_key != '' && '*** provided ***' || 'NOT provided' }}"
           echo "  gcp_sa_key_base64: ${{ github.event.inputs.gcp_sa_key_base64 != '' && '*** provided ***' || 'NOT provided' }}"
           echo "================================================"
 
