@@ -133,21 +133,10 @@ jobs:
           echo "DNS zone '$DNS_ZONE_NAME' already exists."
         fi
     
-        echo "Waiting for ingress IP..."
-        for i in {1..50}; do
-          EXTERNAL_IP=$(kubectl get ingress concrete-gallery-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          if [[ -n "$EXTERNAL_IP" ]]; then
-            echo "Found Ingress IP: $EXTERNAL_IP"
-            break
-          fi
-          echo "Waiting for IP... ($i/50)"
-          sleep 100
-        done
-    
-        if [[ -z "$EXTERNAL_IP" ]]; then
-          echo "ERROR: Ingress IP not found after timeout"
-          exit 1
-        fi
+        echo "Waiting for ingress IP to be provisioned..."
+        kubectl wait --for=jsonpath='{.status.loadBalancer.ingress[0].ip}' ingress/concrete-gallery-ingress --timeout=600s
+        EXTERNAL_IP=$(kubectl get ingress concrete-gallery-ingress -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        echo "Found Ingress IP: $EXTERNAL_IP"
     
         echo "Updating DNS record for $DOMAIN_NAME to $EXTERNAL_IP"
     
