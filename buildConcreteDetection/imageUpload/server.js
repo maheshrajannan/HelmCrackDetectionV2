@@ -12,17 +12,13 @@ var storage = multer.diskStorage({
   }
 })
 
-var upload = multer({ storage: storage }).single('photo');
-// const upload = multer({dest: __dirname + '/uploads/images'}).single('photo');
+var upload = multer({ storage: storage }).array('photos', 10);
 
 const app = express();
 const PORT = 8080;
-// It will use the 80 port to upload images
 
 app.use(express.static('public'));
 
-// Add a route for the root path to serve the upload page
-// this is the code whivh is responsible for ingress problem sortout
 app.get("/upload", (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
@@ -30,9 +26,10 @@ app.get("/upload", (req, res) => {
 app.post("/uploaded", (req, res) => {
    upload(req, res, (err) => {
     if(err) {
-      res.status(400).send("Something went wrong!");
+      console.error(err);
+      return res.status(400).json({ error: "Something went wrong!" });
     }
-    res.send(req.file);
+    res.json({ files: req.files });
   });
 });
 app.listen(PORT, () => {

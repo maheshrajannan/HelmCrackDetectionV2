@@ -1,9 +1,178 @@
-html  
+doctype html
+html(lang="en")
   head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no")
     title= title
+    link(href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet")
+    link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css")
+    style.
+      :root {
+        --primary: #6366f1;
+        --bg: #0f172a;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: rgba(255, 255, 255, 0.1);
+      }
+      body {
+        background-color: var(--bg);
+        background-image: radial-gradient(circle at top right, rgba(99, 102, 241, 0.1), transparent);
+        color: var(--text-main);
+        font-family: 'Outfit', sans-serif;
+        margin: 0;
+        padding: 40px 20px;
+        min-height: 100vh;
+      }
+      .header {
+        max-width: 1200px;
+        margin: 0 auto 48px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      h1 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.025em;
+      }
+      .btn-upload {
+        background: var(--primary);
+        color: white;
+        text-decoration: none;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+      }
+      .btn-upload:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+      }
+      .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .gallery-item {
+        background: var(--card-bg);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+      }
+      .gallery-item:hover {
+        transform: scale(1.02);
+        border-color: var(--primary);
+      }
+      .gallery-item img {
+        width: 100%;
+        height: 240px;
+        object-fit: cover;
+        display: block;
+      }
+      .gallery-item .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .gallery-item:hover .overlay {
+        opacity: 1;
+      }
+      .overlay i {
+        font-size: 2rem;
+        color: white;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 80px 0;
+        color: var(--text-muted);
+      }
+      .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 24px;
+        display: block;
+      }
+      /* Modal */
+      #modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.9);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+      }
+      #modal img {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 12px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      }
+      .close-modal {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        color: white;
+        font-size: 2rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .close-modal:hover {
+        transform: scale(1.1);
+      }
+
   body
-  h1=title
-    ul
-    each image in images
-        li 
-            img(src=image width=300)
+    .header
+      h1 Detected Cracks Gallery
+      a.btn-upload(href="http://localhost:8080/upload")
+        i.fas.fa-plus
+        | Upload New
+
+    if images && images.length
+      .gallery-grid
+        each image in images
+          .gallery-item(onclick=`openModal('${image}')`)
+            img(src=image loading="lazy")
+            .overlay
+              i.fas.fa-search-plus
+    else
+      .empty-state
+        i.fas.fa-images
+        h2 No images found
+        p Start by uploading some concrete images.
+
+    #modal(onclick="closeModal()")
+      span.close-modal &times;
+      img#modal-img(src="")
+
+    script.
+      function openModal(src) {
+        document.getElementById('modal-img').src = src;
+        document.getElementById('modal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+      function closeModal() {
+        document.getElementById('modal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+      // Esc key to close modal
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
