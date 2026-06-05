@@ -2,11 +2,11 @@
 # This is a YAML-formatted file.
 
 # image:
-#   repository: empower9090/image-upload-logic
+#   repository: maheshrajannan/image-upload-logic
 #   tag: latest
 
-global:
-  imageUploadImage: empower9090/image-upload-logic:latest
+# global:
+#   imageUploadImage: maheshrajannan/image-upload-logic:latest
 
 labels:
   app: image-upload-pod
