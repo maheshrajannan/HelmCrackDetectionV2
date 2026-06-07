@@ -13,7 +13,7 @@ variable "dns_zone_name" {
   default = "concretecrackgallery"
 }
 variable "dns_domain" {
-  default = "mahesh.concretecrackgallery.online."
+  default = "maheshconcretegallery.online."
 }
 variable "ip_address" {
   default = "198.216.18.1"
