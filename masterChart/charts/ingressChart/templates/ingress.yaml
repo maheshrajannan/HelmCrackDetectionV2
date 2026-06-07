@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: gce 
   rules:
-    - host: mahesh.concretecrackgallery.online
+    - host: maheshconcretegallery.online
       http:
         paths:
           - path: /

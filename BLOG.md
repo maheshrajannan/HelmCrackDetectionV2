@@ -98,7 +98,7 @@ flowchart LR
 
 Secrets are handled the way they should be: nothing is hardcoded. Cloud credentials, Docker Hub logins, project IDs, and cluster names all flow through GitHub Actions secrets and are injected at runtime. The Terraform configs reference variables, never literals. That discipline is what let me open-source the project without leaking anything.
 
-One design choice I'm happy with: the GKE deploy workflow automates the *networking* glue most tutorials skip — reserving a global static IP, upserting the Cloud DNS A record for `mahesh.concretecrackgallery.online`, and waiting for the managed certificate to validate before declaring success. The domain itself is registered at Hostinger with its nameservers delegated to GCP Cloud DNS, so the entire path from domain to TLS-terminated load balancer is reproducible from a clean slate.
+One design choice I'm happy with: the GKE deploy workflow automates the *networking* glue most tutorials skip — reserving a global static IP, upserting the Cloud DNS A record for `maheshconcretegallery.online`, and waiting for the managed certificate to validate before declaring success. The domain itself is registered at Hostinger with its nameservers delegated to GCP Cloud DNS, so the entire path from domain to TLS-terminated load balancer is reproducible from a clean slate.
 
 ## 3. A Helm umbrella chart for clean composition
 

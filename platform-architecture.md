@@ -8,8 +8,8 @@
 | GCP Infra (Terraform) | GKE Cluster | `crack-detection-cluster` (us-central1-a) |
 | GCP Infra (Terraform) | Node Pool | `primary-node-pool` (e2-medium, 3-7 nodes) |
 | GCP Infra (Deploy WF) | Global Static IP | `concrete-detection-ip` |
-| GCP Infra (Deploy WF) | Cloud DNS Zone | `concrete-zone` |
-| GCP Infra (Deploy WF) | DNS A Record | `mahesh.concretecrackgallery.online → IP` |
+| GCP Infra (Deploy WF) | Cloud DNS Zone | `concrete-zone-1` |
+| GCP Infra (Deploy WF) | DNS A Record | `maheshconcretegallery.online → IP` |
 | GCP Infra (K8s) | GCE L7 Load Balancer | auto-created by GCE Ingress controller |
 | GCP Infra (K8s) | Managed SSL Cert | `concrete-gallery-cert` |
 | K8s / Helm | Ingress | `concrete-gallery-ingress` |
@@ -39,10 +39,10 @@ graph TD
     end
 
     subgraph GCP_DNS ["☁️ GCP Cloud DNS"]
-        Zone["Managed Zone: concrete-zone<br/>DNS name: concretecrackgallery.online"]
+        Zone["Managed Zone: concrete-zone-1<br/>DNS name: concretecrackgallery.online"]
         NSRecord["NS Record<br/>ns-cloud-c1..c4.googledomains.com"]
         SOA["SOA Record<br/>ns-cloud-c1.googledomains.com"]
-        ARecord["A Record<br/>mahesh.concretecrackgallery.online<br/>→ 8.233.230.65"]
+        ARecord["A Record<br/>maheshconcretegallery.online<br/>→ 8.233.230.65"]
         ApexA["A Record (apex)<br/>concretecrackgallery.online<br/>→ 34.8.140.102"]
 
         Zone --> NSRecord
@@ -54,13 +54,13 @@ graph TD
     subgraph GCP_Network ["☁️ GCP Networking"]
         StaticIP["Global Static IP<br/>concrete-detection-ip<br/>8.233.230.65"]
         LB["GCE L7 Load Balancer<br/>(HTTPS :443 / HTTP :80)"]
-        Cert["Managed Certificate<br/>concrete-gallery-cert<br/>mahesh.concretecrackgallery.online"]
+        Cert["Managed Certificate<br/>concrete-gallery-cert<br/>maheshconcretegallery.online"]
         StaticIP -->|"bound to"| LB
         Cert -->|"TLS termination on"| LB
     end
 
     subgraph GKE ["☁️ GKE Cluster"]
-        Ingress["Ingress: concrete-gallery-ingress<br/>annotations:<br/>• ingress.class: gce<br/>• global-static-ip-name: concrete-detection-ip<br/>• managed-certificates: concrete-gallery-cert<br/>host: mahesh.concretecrackgallery.online"]
+        Ingress["Ingress: concrete-gallery-ingress<br/>annotations:<br/>• ingress.class: gce<br/>• global-static-ip-name: concrete-detection-ip<br/>• managed-certificates: concrete-gallery-cert<br/>host: maheshconcretegallery.online"]
         GallerySvc["concrete-image-gallery-svc-lb<br/>NodePort :8082"]
         UploadSvc["image-upload-svc-lb<br/>NodePort :8080"]
         Ingress -->|"/ → "| GallerySvc
@@ -70,7 +70,7 @@ graph TD
     User(["👤 User<br/>browser"])
 
     %% DNS resolution chain
-    User -->|"1. resolves mahesh.concretecrackgallery.online"| CustomNS
+    User -->|"1. resolves maheshconcretegallery.online"| CustomNS
     CustomNS -->|"2. NS delegated to GCP Cloud DNS"| Zone
     Zone -->|"3. A record lookup"| ARecord
     ARecord -->|"4. returns 8.233.230.65"| User
@@ -104,8 +104,8 @@ graph TD
 |---|---|
 | 1 | `concretecrackgallery.online` is purchased and registered at **Hostinger** |
 | 2 | In Hostinger's DNS settings, the default nameservers are **replaced** with GCP's: `ns-cloud-c1..c4.googledomains.com` |
-| 3 | All DNS queries for `*.concretecrackgallery.online` are now answered by **GCP Cloud DNS** (`concrete-zone`) |
-| 4 | GCP Cloud DNS holds the A record: `mahesh.concretecrackgallery.online → 8.233.230.65` |
+| 3 | All DNS queries for `*.concretecrackgallery.online` are now answered by **GCP Cloud DNS** (`concrete-zone-1`) |
+| 4 | GCP Cloud DNS holds the A record: `maheshconcretegallery.online → 8.233.230.65` |
 | 5 | `8.233.230.65` is the **reserved global static IP** (`concrete-detection-ip`) bound to the GCE L7 Load Balancer |
 | 6 | The Load Balancer was provisioned by the **GCE Ingress controller** reading the `concrete-gallery-ingress` annotations |
 | 7 | Traffic is routed by the ingress host rule to the appropriate **NodePort services** inside GKE |
@@ -126,7 +126,7 @@ sequenceDiagram
     participant GCP as GCP Project<br/>(concrete-detection-1-491711)
     participant GKE as GKE Cluster<br/>(crack-detection-cluster)
     participant K8s as Kubernetes API
-    participant DNS as Cloud DNS<br/>(concrete-zone)
+    participant DNS as Cloud DNS<br/>(concrete-zone-1)
     participant LB as GCE L7<br/>Load Balancer
     participant Cert as GCP Managed<br/>Certificate
 
@@ -180,10 +180,10 @@ sequenceDiagram
 
     rect rgb(255, 245, 200)
         Note over GHA,Cert: Phase 3 — DNS + SSL
-        GHA->>DNS: Check/Create managed zone (concrete-zone)
+        GHA->>DNS: Check/Create managed zone (concrete-zone-1)
         GHA->>K8s: Poll for ingress IP
         K8s-->>GHA: 8.233.230.65
-        GHA->>DNS: Upsert A record<br/>mahesh.concretecrackgallery.online → 8.233.230.65
+        GHA->>DNS: Upsert A record<br/>maheshconcretegallery.online → 8.233.230.65
 
         DNS-->>Cert: Domain resolves to LB IP
         K8s->>Cert: ManagedCertificate provisioning triggered
@@ -194,7 +194,7 @@ sequenceDiagram
 
     rect rgb(255, 220, 220)
         Note over Dev,LB: Phase 4 — Traffic Flow (steady state)
-        Dev->>LB: HTTPS → mahesh.concretecrackgallery.online
+        Dev->>LB: HTTPS → maheshconcretegallery.online
         LB->>K8s: Route / → concrete-image-gallery-svc-lb :8082
         LB->>K8s: Route /upload → image-upload-svc-lb :8080
         K8s->>K8s: image-upload-depl calls crack-detection-svc :8081 (internal)
@@ -214,7 +214,7 @@ graph TB
 
         subgraph Networking ["GCP Networking"]
             StaticIP["🌐 Global Static IP\nconcrete-detection-ip\n8.233.230.65"]
-            DNS["🗺 Cloud DNS\nconcrete-zone\nmahesh.concretecrackgallery.online"]
+            DNS["🗺 Cloud DNS\nconcrete-zone-1\nmaheshconcretegallery.online"]
             Cert["🔒 Managed Certificate\nconcrete-gallery-cert\n(SSL/TLS)"]
             LB["⚖️ GCE L7 Load Balancer\n(auto-provisioned by GCE Ingress)"]
         end
@@ -257,7 +257,7 @@ graph TB
     end
 
     %% User traffic flow
-    User -->|"HTTPS :443\nmahesh.concretecrackgallery.online"| DNS
+    User -->|"HTTPS :443\nmaheshconcretegallery.online"| DNS
     DNS -->|"A record → 8.233.230.65"| LB
     Cert -->|"TLS termination"| LB
     StaticIP -->|"bound to"| LB
