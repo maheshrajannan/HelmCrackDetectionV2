@@ -173,9 +173,19 @@ jobs:
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
         run: |
-          terraform init -input=false \
-            -backend-config="access_key=${{ github.event.inputs.do_access_key }}" \
-            -backend-config="secret_key=${{ github.event.inputs.do_secret_key }}"
+          for attempt in 1 2 3; do
+            echo "Terraform init attempt $attempt of 3..."
+            terraform init -input=false \
+              -backend-config="access_key=${{ github.event.inputs.do_access_key }}" \
+              -backend-config="secret_key=${{ github.event.inputs.do_secret_key }}" && break
+            if [[ $attempt -lt 3 ]]; then
+              echo "Init failed, retrying in 30s..."
+              sleep 30
+            else
+              echo "Terraform init failed after 3 attempts."
+              exit 1
+            fi
+          done
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Terraform Plan / Apply / Destroy ====
