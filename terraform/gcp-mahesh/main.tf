@@ -1,19 +1,19 @@
 provider "google" {
-  project = "concrete-detection-1-491711"
-  region  = "us-central1"
+  project = var.project_id
+  region  = var.region
 }
 
 # GKE Cluster (NO default node pool)
 resource "google_container_cluster" "crack_detection" {
-  name     = "crack-detection-cluster"
-  location = "us-central1-a"
+  name     = var.cluster_name
+  location = var.zone
 
   # Important: remove default node pool
   remove_default_node_pool = true
   initial_node_count       = 1
 
-  network    = "default"
-  subnetwork = "default"
+  network    = var.network
+  subnetwork = var.subnetwork
 
   deletion_protection = var.deletion_protection
 
@@ -22,23 +22,16 @@ resource "google_container_cluster" "crack_detection" {
   }
 }
 
-# Variable
-variable "deletion_protection" {
-  description = "Enable or disable deletion protection for the cluster"
-  type        = bool
-  default     = false
-}
-
 # Outputs
 output "cluster_name" {
   value = google_container_cluster.crack_detection.name
 }
 
 output "kubectl_config" {
-  value = <<EOT
+  value     = <<EOT
 gcloud container clusters get-credentials ${google_container_cluster.crack_detection.name} \
-  --zone us-central1-a \
-  --project concrete-detection-1-491711
+  --zone ${var.zone} \
+  --project ${var.project_id}
 EOT
   sensitive = true
 }
