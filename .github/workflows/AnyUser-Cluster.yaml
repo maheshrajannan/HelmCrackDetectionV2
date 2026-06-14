@@ -208,6 +208,43 @@ jobs:
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
         run: terraform apply -auto-approve tfplan
+
+      # ==== Pre-destroy: clean up DO LoadBalancers and PVCs ====
+      - name: Install doctl (DO pre-destroy cleanup)
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
+        run: |
+          curl -sL https://github.com/digitalocean/doctl/releases/download/v1.97.0/doctl-1.97.0-linux-amd64.tar.gz | tar -xz
+          sudo mv doctl /usr/local/bin/
+
+      - name: Configure kubectl for cleanup (DigitalOcean)
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
+        run: |
+          doctl auth init -t ${{ github.event.inputs.do_token }}
+          doctl kubernetes cluster kubeconfig save ${{ github.event.inputs.cluster_name }} || true
+
+      - name: Delete all PVCs (DigitalOcean pre-destroy)
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
+        run: |
+          echo "Deleting all PVCs across all namespaces..."
+          kubectl delete pvc --all --all-namespaces --timeout=120s || true
+          echo "Waiting for PVs to be released..."
+          kubectl wait --for=condition=Released pv --all --timeout=60s 2>/dev/null || true
+          kubectl delete pv --all --timeout=60s 2>/dev/null || true
+          echo "✅ PVCs and PVs deleted"
+
+      - name: Delete all LoadBalancer services (DigitalOcean pre-destroy)
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
+        run: |
+          echo "Deleting all LoadBalancer services to release DO LoadBalancers..."
+          kubectl get svc --all-namespaces -o json \
+            | jq -r '.items[] | select(.spec.type=="LoadBalancer") | "\(.metadata.namespace) \(.metadata.name)"' \
+            | while read ns name; do
+                echo "Deleting LoadBalancer svc/$name in namespace $ns"
+                kubectl delete svc "$name" -n "$ns" --timeout=60s || true
+              done
+          echo "⏳ Waiting 30s for DO to release LoadBalancers..."
+          sleep 30
+          echo "✅ LoadBalancer services deleted"
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Post-apply: print connect command (GCP) ====
