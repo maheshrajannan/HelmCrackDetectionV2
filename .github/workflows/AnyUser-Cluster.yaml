@@ -222,7 +222,8 @@ jobs:
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
         run: |
           doctl auth init -t ${{ github.event.inputs.do_token }}
-          doctl kubernetes cluster kubeconfig save ${{ github.event.inputs.cluster_name }} || true
+          doctl kubernetes cluster kubeconfig save ${{ github.event.inputs.cluster_name }}
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
 
       - name: Delete all LoadBalancer services (DigitalOcean pre-destroy)
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
