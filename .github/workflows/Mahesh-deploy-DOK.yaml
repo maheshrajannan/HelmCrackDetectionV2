@@ -11,6 +11,7 @@ on:
         type: choice
         options:
           - DO-SSL
+          - feat/cert-manager-lets-encrypt-do
       do_token:
         description: "[DO] DigitalOcean API token"
         required: true
