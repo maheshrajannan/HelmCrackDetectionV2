@@ -205,11 +205,13 @@ jobs:
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       - name: Terraform Apply
+        if: ${{ github.event.inputs.action == 'apply' }}
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
         run: terraform apply -auto-approve tfplan
+        working-directory: ${{ steps.setdir.outputs.dir }}
 
-      # ==== Pre-destroy: clean up DO LoadBalancers and PVCs ====
+      # ==== Pre-destroy: clean up DO LoadBalancers and PVCs before Terraform destroys nodes ====
       - name: Install doctl (DO pre-destroy cleanup)
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
         run: |
@@ -221,16 +223,6 @@ jobs:
         run: |
           doctl auth init -t ${{ github.event.inputs.do_token }}
           doctl kubernetes cluster kubeconfig save ${{ github.event.inputs.cluster_name }} || true
-
-      - name: Delete all PVCs (DigitalOcean pre-destroy)
-        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
-        run: |
-          echo "Deleting all PVCs across all namespaces..."
-          kubectl delete pvc --all --all-namespaces --timeout=120s || true
-          echo "Waiting for PVs to be released..."
-          kubectl wait --for=condition=Released pv --all --timeout=60s 2>/dev/null || true
-          kubectl delete pv --all --timeout=60s 2>/dev/null || true
-          echo "✅ PVCs and PVs deleted"
 
       - name: Delete all LoadBalancer services (DigitalOcean pre-destroy)
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
@@ -245,6 +237,21 @@ jobs:
           echo "⏳ Waiting 30s for DO to release LoadBalancers..."
           sleep 30
           echo "✅ LoadBalancer services deleted"
+
+      - name: Delete all PVCs and PVs (DigitalOcean pre-destroy)
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
+        run: |
+          echo "Deleting all PVCs across all namespaces..."
+          kubectl delete pvc --all --all-namespaces --timeout=120s || true
+          kubectl delete pv --all --timeout=60s || true
+          echo "✅ PVCs and PVs deleted"
+
+      # ==== Run Terraform destroy (plan was already created above) ====
+      - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        env:
+          TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
+        run: terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Post-apply: print connect command (GCP) ====
