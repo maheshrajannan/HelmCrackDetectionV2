@@ -211,41 +211,47 @@ jobs:
         run: terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      # ==== Pre-destroy: clean up DO LoadBalancers and PVCs before Terraform destroys nodes ====
+      # ==== Pre-destroy: clean up DO LoadBalancers and Volumes via DO API (no kubectl needed) ====
       - name: Install doctl (DO pre-destroy cleanup)
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
         run: |
           curl -sL https://github.com/digitalocean/doctl/releases/download/v1.97.0/doctl-1.97.0-linux-amd64.tar.gz | tar -xz
           sudo mv doctl /usr/local/bin/
-
-      - name: Configure kubectl for cleanup (DigitalOcean)
-        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
-        run: |
           doctl auth init -t ${{ github.event.inputs.do_token }}
-          doctl kubernetes cluster kubeconfig save ${{ github.event.inputs.cluster_name }}
-          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
 
-      - name: Delete all LoadBalancer services (DigitalOcean pre-destroy)
+      - name: Delete all DO LoadBalancers via API (DigitalOcean pre-destroy)
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
         run: |
-          echo "Deleting all LoadBalancer services to release DO LoadBalancers..."
-          kubectl get svc --all-namespaces -o json \
-            | jq -r '.items[] | select(.spec.type=="LoadBalancer") | "\(.metadata.namespace) \(.metadata.name)"' \
-            | while read ns name; do
-                echo "Deleting LoadBalancer svc/$name in namespace $ns"
-                kubectl delete svc "$name" -n "$ns" --timeout=60s || true
-              done
-          echo "⏳ Waiting 30s for DO to release LoadBalancers..."
-          sleep 30
-          echo "✅ LoadBalancer services deleted"
+          echo "Fetching all LoadBalancers in your DO account..."
+          LB_IDS=$(doctl compute load-balancer list --format ID --no-header 2>/dev/null || true)
+          if [[ -z "$LB_IDS" ]]; then
+            echo "No LoadBalancers found, skipping."
+          else
+            echo "Deleting LoadBalancers: $LB_IDS"
+            for LB_ID in $LB_IDS; do
+              echo "Deleting LoadBalancer $LB_ID..."
+              doctl compute load-balancer delete "$LB_ID" --force
+            done
+            echo "⏳ Waiting 20s for DO to release LoadBalancers..."
+            sleep 20
+            echo "✅ All LoadBalancers deleted"
+          fi
 
-      - name: Delete all PVCs and PVs (DigitalOcean pre-destroy)
+      - name: Delete all DO Block Storage Volumes via API (DigitalOcean pre-destroy)
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'digitalocean' }}
         run: |
-          echo "Deleting all PVCs across all namespaces..."
-          kubectl delete pvc --all --all-namespaces --timeout=120s || true
-          kubectl delete pv --all --timeout=60s || true
-          echo "✅ PVCs and PVs deleted"
+          echo "Fetching all Block Storage Volumes in your DO account..."
+          VOL_IDS=$(doctl compute volume list --format ID --no-header 2>/dev/null || true)
+          if [[ -z "$VOL_IDS" ]]; then
+            echo "No Volumes found, skipping."
+          else
+            echo "Deleting Volumes: $VOL_IDS"
+            for VOL_ID in $VOL_IDS; do
+              echo "Deleting Volume $VOL_ID..."
+              doctl compute volume delete "$VOL_ID" --force || true
+            done
+            echo "✅ All Volumes deleted"
+          fi
 
       # ==== Run Terraform destroy (plan was already created above) ====
       - name: Terraform Destroy
