@@ -1,0 +1,54 @@
+---
+# deploy-master-chart.yml
+#
+# Demo: Ansible replacement for populateCIP.py (now unused) and the Helm
+# portion of runHelmCharts.sh.
+#
+# Instead of mutating masterChart/charts/pv-chart/values.yaml on disk,
+# this playbook discovers the NFS service ClusterIP at deploy time and
+# injects it as an inline Helm value — idempotent, and your git working
+# tree stays clean.
+#
+# Run:  ansible-playbook ansible/deploy-master-chart.yml
+# See ansible.md at the repo root for setup instructions.
+
+- name: Deploy crack-detection charts with auto-discovered NFS ClusterIP
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+    namespace: default
+
+  tasks:
+    - name: Install nfs-server chart
+      kubernetes.core.helm:
+        name: nfs-server
+        chart_ref: "{{ repo_root }}/nfsServerChart"
+        release_namespace: "{{ namespace }}"
+        wait: true
+
+    - name: Look up NFS service ClusterIP (replaces populateCIP.py)
+      kubernetes.core.k8s_info:
+        kind: Service
+        name: nfs-server-svc-cip
+        namespace: "{{ namespace }}"
+      register: nfs_svc
+      until: nfs_svc.resources | length > 0
+      retries: 5
+      delay: 3
+
+    - name: Show discovered ClusterIP
+      ansible.builtin.debug:
+        msg: "NFS ClusterIP: {{ nfs_svc.resources[0].spec.clusterIP }}"
+
+    - name: Install master chart, injecting ClusterIP inline
+      kubernetes.core.helm:
+        name: master-chart
+        chart_ref: "{{ repo_root }}/masterChart"
+        release_namespace: "{{ namespace }}"
+        values:
+          pv-chart:
+            nfsCIP: "{{ nfs_svc.resources[0].spec.clusterIP }}"
+        wait: true
