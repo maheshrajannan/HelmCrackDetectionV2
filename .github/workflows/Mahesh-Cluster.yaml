@@ -19,11 +19,17 @@ on:
         options:
           - apply
           - destroy
+      cluster_name:
+        description: "GKE cluster name (GCP only)"
+        required: false
+        default: "crack-detection-cluster"
+        type: string
 
 env:
   TF_GCP_DIR: ./terraform/gcp-mahesh
   TF_DO_DIR: ./terraform/digitalocean-mahesh
   TF_VAR_digitalocean_token: ${{ secrets.MAHESH_DIGITALOCEAN_ACCESS_TOKEN }}
+  TF_VAR_cluster_name: ${{ github.event.inputs.cluster_name }}
 
 jobs:
   provision-cluster:
@@ -98,7 +104,7 @@ jobs:
           echo "============================================"
           echo "  GKE Cluster Connect Command"
           echo "============================================"
-          echo "gcloud container clusters get-credentials crack-detection-cluster --zone us-central1-a --project ${{ vars.MAHESH_GCP_PROJECT }}"
+          echo "gcloud container clusters get-credentials ${{ github.event.inputs.cluster_name }} --zone us-central1-a --project ${{ vars.MAHESH_GCP_PROJECT }}"
           echo "============================================"
 
       # ==== Delete SSL certificates on destroy (GCP only) ====
@@ -218,7 +224,7 @@ jobs:
           echo "============================================"
           echo "  GKE Cluster Connect Command"
           echo "============================================"
-          echo "gcloud container clusters get-credentials crack-detection-cluster --zone us-central1-a --project ${{ vars.MAHESH_GCP_PROJECT }}"
+          echo "gcloud container clusters get-credentials ${{ github.event.inputs.cluster_name }} --zone us-central1-a --project ${{ vars.MAHESH_GCP_PROJECT }}"
           echo "============================================"
 
       # ==== Delete SSL certificates on destroy (GCP only) ====
