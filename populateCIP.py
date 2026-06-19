@@ -1,3 +1,9 @@
+# NOTE: This script is NOT being used.
+# It is kept for reference only. Its job (injecting the NFS service ClusterIP
+# into masterChart/charts/pv-chart/values.yaml) is superseded by the Ansible
+# playbook ansible/deploy-master-chart.yml, which looks up the ClusterIP and
+# injects it inline at `helm install` time — no file mutation needed.
+
 import yaml
 import subprocess
 
