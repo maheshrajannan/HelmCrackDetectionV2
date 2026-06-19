@@ -148,7 +148,7 @@ jobs:
             echo "⏳ Not ready yet, retrying in 10s... ($i/12)"
             sleep 10
           done
-          echo "⚠️  ClusterIssuer not ready after 2 minutes — check logs:"
+          echo "  ClusterIssuer not ready after 2 minutes — check logs:"
           echo "    kubectl logs -n cert-manager deploy/cert-manager"
           exit 1
 
