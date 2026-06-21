@@ -5,7 +5,7 @@ provider "google" {
 
 # GKE Cluster (NO default node pool)
 resource "google_container_cluster" "crack_detection" {
-  name     = "crack-detection-cluster"
+  name     = var.cluster_name
   location = "us-central1-a"
 
   # Important: remove default node pool
@@ -22,7 +22,13 @@ resource "google_container_cluster" "crack_detection" {
   }
 }
 
-# Variable
+# Variables
+variable "cluster_name" {
+  description = "Name of the GKE cluster"
+  type        = string
+  default     = "crack-detection-cluster"
+}
+
 variable "deletion_protection" {
   description = "Enable or disable deletion protection for the cluster"
   type        = bool
