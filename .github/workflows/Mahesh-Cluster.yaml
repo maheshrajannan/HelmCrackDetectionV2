@@ -103,20 +103,27 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          GCP_VARS="-var=\"project_id=${{ github.event.inputs.gcp_project_id }}\" -var=\"cluster_name=${{ github.event.inputs.gce_cluster_name }}\" -var=\"zone=${{ github.event.inputs.gce_zone }}\""
-          if [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
-            GCP_VARS=""
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.gce_cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gce_zone }}"
           fi
           
           if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-            terraform plan $GCP_VARS -out=tfplan
+            terraform plan -out=tfplan
           else
-            terraform plan $GCP_VARS -destroy -out=tfplan
+            terraform plan -destroy -out=tfplan
           fi
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.gce_cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gce_zone }}"
+          fi
+          terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Print cluster connect URL after apply (GCP only) ====
@@ -201,7 +208,7 @@ jobs:
       - name: Set GCP Project
         if: ${{ matrix.provider == 'gcp' }}
         run: |
-          gcloud config set project ${{ secrets.MAHESH_GCP_PROJECT_ID }}
+          gcloud config set project ${{ github.event.inputs.gcp_project_id }}
 
       # ==== INIT FIRST ====
       - name: Terraform Init
@@ -228,20 +235,27 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          GCP_VARS="-var=\"project_id=${{ github.event.inputs.gcp_project_id }}\" -var=\"cluster_name=${{ github.event.inputs.gce_cluster_name }}\" -var=\"zone=${{ github.event.inputs.gce_zone }}\""
-          if [[ "${{ matrix.provider }}" == "digitalocean" ]]; then
-            GCP_VARS=""
+          if [[ "${{ matrix.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.gce_cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gce_zone }}"
           fi
           
           if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-            terraform plan $GCP_VARS -out=tfplan
+            terraform plan -out=tfplan
           else
-            terraform plan $GCP_VARS -destroy -out=tfplan
+            terraform plan -destroy -out=tfplan
           fi
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: |
+          if [[ "${{ matrix.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.gce_cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gce_zone }}"
+          fi
+          terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Print cluster connect URL after apply (GCP only) ====
