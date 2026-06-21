@@ -197,6 +197,12 @@ jobs:
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
         run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gcp_cluster_zone }}"
+          fi
+          
           if [[ "${{ github.event.inputs.action }}" == "apply" ]]; then
             terraform plan -out=tfplan
           else
@@ -208,7 +214,13 @@ jobs:
         if: ${{ github.event.inputs.action == 'apply' }}
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
-        run: terraform apply -auto-approve tfplan
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gcp_cluster_zone }}"
+          fi
+          terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Pre-destroy: clean up DO LoadBalancers and Volumes via DO API (no kubectl needed) ====
@@ -258,7 +270,13 @@ jobs:
         if: ${{ github.event.inputs.action == 'destroy' }}
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
-        run: terraform apply -auto-approve tfplan
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gcp_cluster_zone }}"
+          fi
+          terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Post-apply: print connect command (GCP) ====

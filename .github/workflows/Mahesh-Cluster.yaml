@@ -19,21 +19,6 @@ on:
         options:
           - apply
           - destroy
-      gcp_project_id:
-        description: "[GCP] Project ID"
-        required: true
-        type: string
-        default: "concrete-detection-1-491711"
-      gce_cluster_name:
-        description: "[GCP] GKE Cluster Name"
-        required: true
-        default: "crack-detection-cluster"
-        type: string
-      gce_zone:
-        description: "[GCP] GKE Zone"
-        required: true
-        default: "us-central1-a"
-        type: string
 
 env:
   TF_GCP_DIR: ./terraform/gcp-mahesh
@@ -48,15 +33,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Print input parameters
-        run: |
-          echo "================================================"
-          echo "  Pipeline Input Parameters"
-          echo "================================================"
-          echo "  provider        : ${{ github.event.inputs.provider }}"
-          echo "  action          : ${{ github.event.inputs.action }}"
-          echo "================================================"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -82,7 +58,8 @@ jobs:
       - name: Set GCP Project
         if: ${{ github.event.inputs.provider == 'gcp' }}
         run: |
-          gcloud config set project ${{ github.event.inputs.gcp_project_id }}
+          gcloud config set project concrete-detection-1-491711
+          echo "GOOGLE_CREDENTIALS=${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}" | terraform env new gcp
 
       # ==== INIT FIRST ====
       - name: Terraform Init
@@ -103,12 +80,6 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
-            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
-            export TF_VAR_cluster_name="${{ github.event.inputs.gce_cluster_name }}"
-            export TF_VAR_zone="${{ github.event.inputs.gce_zone }}"
-          fi
-          
           if [ "${{ github.event.inputs.action }}" == "apply" ]; then
             terraform plan -out=tfplan
           else
@@ -117,13 +88,7 @@ jobs:
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       - name: Terraform Apply
-        run: |
-          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
-            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
-            export TF_VAR_cluster_name="${{ github.event.inputs.gce_cluster_name }}"
-            export TF_VAR_zone="${{ github.event.inputs.gce_zone }}"
-          fi
-          terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Print cluster connect URL after apply (GCP only) ====
@@ -133,14 +98,14 @@ jobs:
           echo "============================================"
           echo "  GKE Cluster Connect Command"
           echo "============================================"
-          echo "gcloud container clusters get-credentials ${{ github.event.inputs.gce_cluster_name }} --zone ${{ github.event.inputs.gce_zone }} --project ${{ github.event.inputs.gcp_project_id }}"
+          echo "gcloud container clusters get-credentials crack-detection-cluster --zone us-central1-a --project ${{ vars.MAHESH_GCP_PROJECT }}"
           echo "============================================"
 
       # ==== Delete SSL certificates on destroy (GCP only) ====
       - name: Delete all SSL certificates
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
         run: |
-          GCP_PROJECT="${{ github.event.inputs.gcp_project_id }}"
+          GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
           echo "Fetching all SSL certificates..."
           CERTS=$(gcloud compute ssl-certificates list --project=$GCP_PROJECT --format="value(name)" 2>/dev/null || true)
           if [[ -z "$CERTS" ]]; then
@@ -156,7 +121,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
         run: |
           IP_NAME="concrete-detection-ip"
-          GCP_PROJECT="${{ github.event.inputs.gcp_project_id }}"
+          GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
           echo "Checking if static IP '$IP_NAME' exists..."
           EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
           if [[ -n "$EXISTING_IP" ]]; then
@@ -208,7 +173,7 @@ jobs:
       - name: Set GCP Project
         if: ${{ matrix.provider == 'gcp' }}
         run: |
-          gcloud config set project ${{ github.event.inputs.gcp_project_id }}
+          gcloud config set project ${{ secrets.MAHESH_GCP_PROJECT_ID }}
 
       # ==== INIT FIRST ====
       - name: Terraform Init
@@ -235,12 +200,6 @@ jobs:
 
       - name: Terraform Plan
         run: |
-          if [[ "${{ matrix.provider }}" == "gcp" ]]; then
-            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
-            export TF_VAR_cluster_name="${{ github.event.inputs.gce_cluster_name }}"
-            export TF_VAR_zone="${{ github.event.inputs.gce_zone }}"
-          fi
-          
           if [ "${{ github.event.inputs.action }}" == "apply" ]; then
             terraform plan -out=tfplan
           else
@@ -249,13 +208,7 @@ jobs:
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       - name: Terraform Apply
-        run: |
-          if [[ "${{ matrix.provider }}" == "gcp" ]]; then
-            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
-            export TF_VAR_cluster_name="${{ github.event.inputs.gce_cluster_name }}"
-            export TF_VAR_zone="${{ github.event.inputs.gce_zone }}"
-          fi
-          terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Print cluster connect URL after apply (GCP only) ====
@@ -265,14 +218,14 @@ jobs:
           echo "============================================"
           echo "  GKE Cluster Connect Command"
           echo "============================================"
-          echo "gcloud container clusters get-credentials ${{ github.event.inputs.gce_cluster_name }} --zone ${{ github.event.inputs.gce_zone }} --project ${{ github.event.inputs.gcp_project_id }}"
+          echo "gcloud container clusters get-credentials crack-detection-cluster --zone us-central1-a --project ${{ vars.MAHESH_GCP_PROJECT }}"
           echo "============================================"
 
       # ==== Delete SSL certificates on destroy (GCP only) ====
       - name: Delete all SSL certificates
         if: ${{ github.event.inputs.action == 'destroy' && matrix.provider == 'gcp' }}
         run: |
-          GCP_PROJECT="${{ github.event.inputs.gcp_project_id }}"
+          GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
           echo "Fetching all SSL certificates..."
           CERTS=$(gcloud compute ssl-certificates list --project=$GCP_PROJECT --format="value(name)" 2>/dev/null || true)
           if [[ -z "$CERTS" ]]; then
@@ -288,7 +241,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'destroy' && matrix.provider == 'gcp' }}
         run: |
           IP_NAME="concrete-detection-ip"
-          GCP_PROJECT="${{ github.event.inputs.gcp_project_id }}"
+          GCP_PROJECT="${{ secrets.MAHESH_GCP_PROJECT_ID }}"
           echo "Checking if static IP '$IP_NAME' exists..."
           EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
           if [[ -n "$EXISTING_IP" ]]; then
