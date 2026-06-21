@@ -1,16 +1,16 @@
 resource "google_container_node_pool" "primary" {
   name     = "primary-node-pool"
   cluster  = google_container_cluster.crack_detection.name
-  location = "us-central1-a"
+  location = var.zone
 
   autoscaling {
-    min_node_count = 3
-    max_node_count = 7
+    min_node_count = var.min_node_count
+    max_node_count = var.max_node_count
   }
 
   node_config {
-    machine_type = "e2-medium"
-    disk_size_gb = 20
+    machine_type = var.machine_type
+    disk_size_gb = var.disk_size_gb
     disk_type    = "pd-standard"
 
     oauth_scopes = [

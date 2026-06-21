@@ -1,0 +1,104 @@
+# ⚠️  UNTESTED — This workflow has not been run or validated yet.
+#     Test manually before relying on it in a deployment pipeline.
+
+name: Mahesh-Publish-Helm-Charts
+
+on:
+  workflow_dispatch:
+    inputs:
+      chart:
+        description: "Which chart to publish"
+        required: true
+        default: "both"
+        type: choice
+        options:
+          - masterChart
+          - nfsServerChart
+          - both
+
+jobs:
+  publish-helm-charts:
+    name: Package and Push Helm Charts to Docker Hub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.14.0"  # Minimum v3.8.0 required for OCI support
+
+      - name: Log in to Docker Hub OCI registry
+        run: |
+          helm registry login registry-1.docker.io \
+            --username ${{ secrets.MAHESH_DOCKER_USERNAME }} \
+            --password ${{ secrets.MAHESH_DOCKER_PASSWORD }}
+
+      # ── nfsServerChart ──────────────────────────────────────────────────────
+
+      - name: Package nfsServerChart
+        if: ${{ github.event.inputs.chart == 'nfsServerChart' || github.event.inputs.chart == 'both' }}
+        run: |
+          helm package ./nfsServerChart
+          echo "NFS_CHART_TGZ=$(ls nfsServerChart-*.tgz)" >> $GITHUB_ENV
+
+      - name: Push nfsServerChart to Docker Hub
+        if: ${{ github.event.inputs.chart == 'nfsServerChart' || github.event.inputs.chart == 'both' }}
+        run: |
+          helm push ${{ env.NFS_CHART_TGZ }} \
+            oci://registry-1.docker.io/${{ secrets.MAHESH_DOCKER_USERNAME }}
+          echo "✅ Pushed: oci://registry-1.docker.io/${{ secrets.MAHESH_DOCKER_USERNAME }}/nfsserverchart"
+
+      # ── masterChart ─────────────────────────────────────────────────────────
+
+      - name: Build masterChart dependencies
+        if: ${{ github.event.inputs.chart == 'masterChart' || github.event.inputs.chart == 'both' }}
+        run: |
+          # Sub-charts are local (file://) dependencies — resolve them before packaging
+          helm dependency build ./masterChart
+
+      - name: Package masterChart
+        if: ${{ github.event.inputs.chart == 'masterChart' || github.event.inputs.chart == 'both' }}
+        run: |
+          helm package ./masterChart
+          echo "MASTER_CHART_TGZ=$(ls masterChart-*.tgz)" >> $GITHUB_ENV
+
+      - name: Push masterChart to Docker Hub
+        if: ${{ github.event.inputs.chart == 'masterChart' || github.event.inputs.chart == 'both' }}
+        run: |
+          helm push ${{ env.MASTER_CHART_TGZ }} \
+            oci://registry-1.docker.io/${{ secrets.MAHESH_DOCKER_USERNAME }}
+          echo "✅ Pushed: oci://registry-1.docker.io/${{ secrets.MAHESH_DOCKER_USERNAME }}/masterchart"
+
+      # ── Summary ─────────────────────────────────────────────────────────────
+
+      - name: Print published chart references
+        run: |
+          echo "============================================================"
+          echo "  Published Helm Charts"
+          echo "============================================================"
+          if [[ "${{ github.event.inputs.chart }}" == "nfsServerChart" || "${{ github.event.inputs.chart }}" == "both" ]]; then
+            NFS_VERSION=$(grep '^version:' nfsServerChart/Chart.yaml | awk '{print $2}')
+            echo "  nfsServerChart : oci://registry-1.docker.io/${{ secrets.MAHESH_DOCKER_USERNAME }}/nfsserverchart:${NFS_VERSION}"
+          fi
+          if [[ "${{ github.event.inputs.chart }}" == "masterChart" || "${{ github.event.inputs.chart }}" == "both" ]]; then
+            MASTER_VERSION=$(grep '^version:' masterChart/Chart.yaml | awk '{print $2}')
+            echo "  masterChart    : oci://registry-1.docker.io/${{ secrets.MAHESH_DOCKER_USERNAME }}/masterchart:${MASTER_VERSION}"
+          fi
+          echo "============================================================"
+          echo ""
+          echo "  To install:"
+          echo "  helm upgrade --install nfs-server \\"
+          echo "    oci://registry-1.docker.io/${{ secrets.MAHESH_DOCKER_USERNAME }}/nfsserverchart \\"
+          echo "    --version <version>"
+          echo ""
+          echo "  helm upgrade --install master-chart \\"
+          echo "    oci://registry-1.docker.io/${{ secrets.MAHESH_DOCKER_USERNAME }}/masterchart \\"
+          echo "    --version <version>"
+          echo "============================================================"
+
+      - name: Log out of Docker Hub registry
+        if: always()
+        run: helm registry logout registry-1.docker.io
