@@ -44,12 +44,12 @@ variable "digitalocean_token" {
 
 variable "cluster_name" {
   description = "Name of the Kubernetes cluster"
-  default     = "crack-detection-cluster"
+  type        = string
 }
 
 variable "region" {
   description = "DigitalOcean region"
-  default     = "nyc3"
+  default = "nyc3"
 }
 
 variable "node_count" {
