@@ -32,7 +32,7 @@ variable "digitalocean_token" {
 
 variable "cluster_name" {
   description = "Name of the Kubernetes cluster"
-  default     = "crack-detection-cluster"
+  type        = string
 }
 
 variable "region" {

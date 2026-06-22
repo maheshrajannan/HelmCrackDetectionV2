@@ -204,10 +204,6 @@ jobs:
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
         run: |
-      - name: Terraform Plan
-        env:
-          TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
-        run: |
           if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
             export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
             export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
