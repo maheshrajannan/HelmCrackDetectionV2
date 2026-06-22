@@ -89,6 +89,12 @@ on:
         default: "./terraform/digitalocean-mahesh"
         type: string
 
+      do_cluster_region:
+        description: "[DO] Region for the DOKS cluster  e.g. nyc3"
+        required: false
+        default: "nyc3"
+        type: string
+
 jobs:
   provision-cluster:
     name: Provision Kubernetes Cluster
@@ -110,6 +116,7 @@ jobs:
           echo "  gcp_cluster_zone: ${{ github.event.inputs.gcp_cluster_zone }}"
           echo "  gcp_terraform_dir: ${{ github.event.inputs.gcp_terraform_dir }}"
           echo "  do_terraform_dir: ${{ github.event.inputs.do_terraform_dir }}"
+          echo "  do_cluster_region: ${{ github.event.inputs.do_cluster_region }}"
           echo "  do_token        : ${{ github.event.inputs.do_token != '' && '*** provided ***' || 'NOT provided' }}"
           echo "  do_access_key   : ${{ github.event.inputs.do_access_key != '' && '*** provided ***' || 'NOT provided' }}"
           echo "  do_secret_key   : ${{ github.event.inputs.do_secret_key != '' && '*** provided ***' || 'NOT provided' }}"
@@ -197,6 +204,19 @@ jobs:
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
         run: |
+      - name: Terraform Plan
+        env:
+          TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gcp_cluster_zone }}"
+          elif [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_region="${{ github.event.inputs.do_cluster_region }}"
+          fi
+          
           if [[ "${{ github.event.inputs.action }}" == "apply" ]]; then
             terraform plan -out=tfplan
           else
@@ -208,7 +228,16 @@ jobs:
         if: ${{ github.event.inputs.action == 'apply' }}
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
-        run: terraform apply -auto-approve tfplan
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gcp_cluster_zone }}"
+          elif [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_region="${{ github.event.inputs.do_cluster_region }}"
+          fi
+          terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Pre-destroy: clean up DO LoadBalancers and Volumes via DO API (no kubectl needed) ====
@@ -258,7 +287,16 @@ jobs:
         if: ${{ github.event.inputs.action == 'destroy' }}
         env:
           TF_VAR_digitalocean_token: ${{ github.event.inputs.do_token }}
-        run: terraform apply -auto-approve tfplan
+        run: |
+          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+            export TF_VAR_project_id="${{ github.event.inputs.gcp_project_id }}"
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_zone="${{ github.event.inputs.gcp_cluster_zone }}"
+          elif [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
+            export TF_VAR_cluster_name="${{ github.event.inputs.cluster_name }}"
+            export TF_VAR_region="${{ github.event.inputs.do_cluster_region }}"
+          fi
+          terraform apply -auto-approve tfplan
         working-directory: ${{ steps.setdir.outputs.dir }}
 
       # ==== Post-apply: print connect command (GCP) ====
