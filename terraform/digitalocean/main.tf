@@ -49,7 +49,7 @@ variable "cluster_name" {
 
 variable "region" {
   description = "DigitalOcean region"
-  type        = string
+  default = "nyc3"
 }
 
 variable "node_count" {
