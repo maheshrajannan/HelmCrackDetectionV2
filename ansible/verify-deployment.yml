@@ -1,0 +1,61 @@
+---
+# verify-deployment.yml
+#
+# Read-only health check for the crack-detection stack. Confirms the three
+# application pods are Running and prints the gallery URL. Makes no changes
+# to the cluster, so it is always safe to run.
+#
+# Prereqs (same as deploy-master-chart.yml):
+#   pip3 install ansible kubernetes
+#   ansible-galaxy collection install kubernetes.core
+#   gcloud container clusters get-credentials <cluster-name> --zone <zone>
+#
+# Run:  ansible-playbook ansible/verify-deployment.yml
+
+- name: Verify crack-detection deployment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    namespace: default
+
+  tasks:
+    - name: Get application pods
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ namespace }}"
+        label_selectors:
+          - "app in (image-upload-pod, crack-detection-pod, concrete-image-gallery-pod)"
+      register: pods
+
+    - name: Fail if no application pods were found
+      ansible.builtin.assert:
+        that: "pods.resources | length > 0"
+        fail_msg: "No crack-detection pods found in namespace '{{ namespace }}'. Is the master chart deployed?"
+        success_msg: "Found {{ pods.resources | length }} application pod(s)."
+
+    - name: Assert every pod is Running
+      ansible.builtin.assert:
+        that: "item.status.phase == 'Running'"
+        fail_msg: "Pod {{ item.metadata.name }} is {{ item.status.phase }}, expected Running"
+        success_msg: "{{ item.metadata.name }} is Running"
+      loop: "{{ pods.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: Look up the ingress
+      kubernetes.core.k8s_info:
+        kind: Ingress
+        name: concrete-gallery-ingress
+        namespace: "{{ namespace }}"
+      register: ing
+
+    - name: Show gallery URL
+      ansible.builtin.debug:
+        msg: >-
+          Gallery URL:
+          http://{{ (ing.resources[0].status.loadBalancer.ingress[0].ip
+          if (ing.resources | length > 0
+              and ing.resources[0].status.loadBalancer.ingress | default([]) | length > 0)
+          else 'pending') }}/
