@@ -1,1 +1,4 @@
-nfsCIP: 34.118.233.237
+# nfsCIP MUST be injected at deploy time from the live nfs-server-svc-cip ClusterIP.
+# Do not commit a real address — it is cluster-specific and changes on every NFS recreation.
+# Inject via: helm install master-chart ./masterChart --set pv-chart.nfsCIP="$NFS_CIP"
+nfsCIP: ""
