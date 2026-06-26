@@ -85,3 +85,87 @@ kubectl cluster-info
 ```
 
 You should see a list of your GKE nodes and cluster endpoint information.
+
+---
+
+# Local DigitalOcean Setup and Cluster Connection Guide
+
+This guide explains how to set up your local environment to connect to and manage your DigitalOcean Kubernetes (DOKS) cluster.
+
+## 1. Install doctl (DigitalOcean CLI)
+
+### Linux
+```bash
+curl -sL https://github.com/digitalocean/doctl/releases/download/v1.97.0/doctl-1.97.0-linux-amd64.tar.gz | tar -xz
+sudo mv doctl /usr/local/bin/
+```
+
+### macOS
+```bash
+brew install doctl
+```
+
+### Windows
+Download the latest release from the [doctl releases page](https://github.com/digitalocean/doctl/releases) and add it to your PATH.
+
+Verify installation:
+```bash
+doctl version
+```
+
+## 2. Authenticate with DigitalOcean
+
+Generate a Personal Access Token from [https://cloud.digitalocean.com/account/api/tokens](https://cloud.digitalocean.com/account/api/tokens) with **Read** and **Write** scopes, then authenticate:
+
+```bash
+doctl auth init -t <YOUR_DO_API_TOKEN>
+```
+
+Verify authentication:
+```bash
+doctl account get
+```
+
+## 3. List Your DOKS Clusters
+
+Check available clusters in your account:
+
+```bash
+doctl kubernetes cluster list
+```
+
+## 4. Connect to Your DOKS Cluster
+
+Run the following command to fetch credentials and update your local `kubeconfig`:
+
+```bash
+# Replace <CLUSTER_NAME> with your actual DOKS cluster name
+doctl kubernetes cluster kubeconfig save <CLUSTER_NAME>
+```
+
+> [!TIP]
+> The default cluster name used in this project is `crack-detection-cluster`.
+> You can find the exact name in the GitHub Actions workflow logs after a successful cluster deployment.
+
+## 5. Verify Connection
+
+Once connected, verify that you can reach the cluster:
+
+```bash
+kubectl get nodes
+kubectl cluster-info
+```
+
+You should see a list of your DOKS nodes and cluster endpoint information.
+
+## 6. Switch Between Clusters (Optional)
+
+If you manage multiple clusters (e.g. GKE and DOKS), you can switch between contexts:
+
+```bash
+# List all available contexts
+kubectl config get-contexts
+
+# Switch to your DOKS cluster context
+kubectl config use-context do-<REGION>-<CLUSTER_NAME>
+```
