@@ -16,5 +16,6 @@ variable "dns_domain" {
   default = "concretecrackgallery.online."
 }
 variable "ip_address" {
-  default = "198.216.18.1"
+  type        = string
+  description = "Reserved static IP that the DNS A records point at. Must be supplied (e.g. -var ip_address=<reserved ip> or TF_VAR_ip_address); no default to avoid creating A records pointing at a placeholder."
 }
