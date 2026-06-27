@@ -1,85 +1,7 @@
-name: Terraform GKE Cluster Management with GCS Backend
-
-on:
-  workflow_dispatch:
-    inputs:
-      action:
-        description: "Choose an action: apply or destroy"
-        required: true
-        default: "apply"
-        type: choice
-        options:
-          - apply
-          - destroy
-
-env:
-  TF_WORKING_DIR: ./terraform
-
-jobs:
-  terraform:
-    name: Manage GKE Cluster
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_wrapper: false
-
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v1
-      with:
-        credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-
-    - name: Setup Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-        service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-        export_default_credentials: true
-
-    - name: Terraform Init
-      run: terraform init -input=false
-      working-directory: ${{ env.TF_WORKING_DIR }}
-      
-    - name: Disable deletion protection before destroy
-      if: github.event.inputs.action == 'destroy'
-      run: |
-        terraform apply -auto-approve -var='deletion_protection=false'
-      working-directory: ${{ env.TF_WORKING_DIR }}
-
-    - name: Terraform Plan or Destroy
-      run: |
-        if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-          terraform plan -out=tfplan
-        else
-          terraform plan -destroy -out=tfplan
-        fi
-      working-directory: ${{ env.TF_WORKING_DIR }}
-
-    - name: Apply or Destroy
-      if: github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
-      run: terraform apply -auto-approve tfplan
-      working-directory: ${{ env.TF_WORKING_DIR }}
-
-    - name: Cleanup Terraform Plan
-      if: github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
-      run: rm -f tfplan
-      working-directory: ${{ env.TF_WORKING_DIR }}
-
-
-
-
-
-
-
-
 # name: Terraform GKE Cluster Management with GCS Backend
+
 # on:
-#     workflow_dispatch:
+#   workflow_dispatch:
 #     inputs:
 #       action:
 #         description: "Choose an action: apply or destroy"
@@ -89,12 +11,13 @@ jobs:
 #         options:
 #           - apply
 #           - destroy
+
 # env:
-#   TF_WORKING_DIR: ./terraform  # Adjust to your Terraform files location
+#   TF_WORKING_DIR: ./terraform
 
 # jobs:
 #   terraform:
-#     name: Terraform
+#     name: Manage GKE Cluster
 #     runs-on: ubuntu-latest
 
 #     steps:
@@ -103,6 +26,8 @@ jobs:
 
 #     - name: Setup Terraform
 #       uses: hashicorp/setup-terraform@v2
+#       with:
+#         terraform_wrapper: false
 
 #     - name: Authenticate to Google Cloud
 #       uses: google-github-actions/auth@v1
@@ -117,34 +42,109 @@ jobs:
 #         export_default_credentials: true
 
 #     - name: Terraform Init
-#       run: terraform init
+#       run: terraform init -input=false
+#       working-directory: ${{ env.TF_WORKING_DIR }}
+      
+#     - name: Disable deletion protection before destroy
+#       if: github.event.inputs.action == 'destroy'
+#       run: |
+#         terraform apply -auto-approve -var='deletion_protection=false'
 #       working-directory: ${{ env.TF_WORKING_DIR }}
 
-#     - name: Terraform Plan
-#       run: terraform plan -out=tfplan
+#     - name: Terraform Plan or Destroy
+#       run: |
+#         if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+#           terraform plan -out=tfplan
+#         else
+#           terraform plan -destroy -out=tfplan
+#         fi
 #       working-directory: ${{ env.TF_WORKING_DIR }}
-#       env:
-#         TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
-#         TF_VAR_region: us-central1  # Adjust to your desired region
 
-#     - name: Upload Terraform Plan
-#       uses: actions/upload-artifact@v3
-#       with:
-#         name: tfplan
-#         path: ${{ env.TF_WORKING_DIR }}/tfplan
-
-#     - name: Terraform Apply
-#       if: github.event.inputs.destroy == 'apply'
+#     - name: Apply or Destroy
+#       if: github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
 #       run: terraform apply -auto-approve tfplan
 #       working-directory: ${{ env.TF_WORKING_DIR }}
-#       env:
-#         TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
-#         TF_VAR_region: us-central1
 
-#     - name: Terraform Destroy (Optional)
-#       if: github.event.inputs.destroy == 'destroy'
-#       run: terraform destroy -auto-approve
+#     - name: Cleanup Terraform Plan
+#       if: github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
+#       run: rm -f tfplan
 #       working-directory: ${{ env.TF_WORKING_DIR }}
-#       env:
-#         TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
-#         TF_VAR_region: us-central1
+
+
+
+
+
+
+
+
+# # name: Terraform GKE Cluster Management with GCS Backend
+# # on:
+# #     workflow_dispatch:
+# #     inputs:
+# #       action:
+# #         description: "Choose an action: apply or destroy"
+# #         required: true
+# #         default: "apply"
+# #         type: choice
+# #         options:
+# #           - apply
+# #           - destroy
+# # env:
+# #   TF_WORKING_DIR: ./terraform  # Adjust to your Terraform files location
+
+# # jobs:
+# #   terraform:
+# #     name: Terraform
+# #     runs-on: ubuntu-latest
+
+# #     steps:
+# #     - name: Checkout code
+# #       uses: actions/checkout@v3
+
+# #     - name: Setup Terraform
+# #       uses: hashicorp/setup-terraform@v2
+
+# #     - name: Authenticate to Google Cloud
+# #       uses: google-github-actions/auth@v1
+# #       with:
+# #         credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+# #     - name: Setup Google Cloud SDK
+# #       uses: google-github-actions/setup-gcloud@v1
+# #       with:
+# #         project_id: ${{ secrets.GCP_PROJECT_ID }}
+# #         service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+# #         export_default_credentials: true
+
+# #     - name: Terraform Init
+# #       run: terraform init
+# #       working-directory: ${{ env.TF_WORKING_DIR }}
+
+# #     - name: Terraform Plan
+# #       run: terraform plan -out=tfplan
+# #       working-directory: ${{ env.TF_WORKING_DIR }}
+# #       env:
+# #         TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+# #         TF_VAR_region: us-central1  # Adjust to your desired region
+
+# #     - name: Upload Terraform Plan
+# #       uses: actions/upload-artifact@v3
+# #       with:
+# #         name: tfplan
+# #         path: ${{ env.TF_WORKING_DIR }}/tfplan
+
+# #     - name: Terraform Apply
+# #       if: github.event.inputs.destroy == 'apply'
+# #       run: terraform apply -auto-approve tfplan
+# #       working-directory: ${{ env.TF_WORKING_DIR }}
+# #       env:
+# #         TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+# #         TF_VAR_region: us-central1
+
+# #     - name: Terraform Destroy (Optional)
+# #       if: github.event.inputs.destroy == 'destroy'
+# #       run: terraform destroy -auto-approve
+# #       working-directory: ${{ env.TF_WORKING_DIR }}
+# #       env:
+# #         TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+# #         TF_VAR_region: us-central1
