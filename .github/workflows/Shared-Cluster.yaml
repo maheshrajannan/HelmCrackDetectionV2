@@ -1,297 +1,297 @@
-name: Kubernetes Cluster Provisioning (Shared)
+# name: Kubernetes Cluster Provisioning (Shared)
 
-on:
-  workflow_dispatch:
-    inputs:
-      user:
-        description: "Select user"
-        required: true
-        default: "mahesh"
-        type: choice
-        options:
-          - mahesh
-          - normal
-      provider:
-        description: "Choose cloud provider"
-        required: true
-        default: "gcp"
-        type: choice
-        options:
-          - gcp
-          - digitalocean
-          - both
-      action:
-        description: "Choose an action"
-        required: true
-        default: "apply"
-        type: choice
-        options:
-          - apply
-          - destroy
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       user:
+#         description: "Select user"
+#         required: true
+#         default: "mahesh"
+#         type: choice
+#         options:
+#           - mahesh
+#           - normal
+#       provider:
+#         description: "Choose cloud provider"
+#         required: true
+#         default: "gcp"
+#         type: choice
+#         options:
+#           - gcp
+#           - digitalocean
+#           - both
+#       action:
+#         description: "Choose an action"
+#         required: true
+#         default: "apply"
+#         type: choice
+#         options:
+#           - apply
+#           - destroy
 
-jobs:
-  provision-cluster:
-    name: Provision Kubernetes Cluster
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.provider != 'both' }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+# jobs:
+#   provision-cluster:
+#     name: Provision Kubernetes Cluster
+#     runs-on: ubuntu-latest
+#     if: ${{ github.event.inputs.provider != 'both' }}
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v4
 
-      - name: Resolve credentials and config
-        id: config
-        run: |
-          if [[ "${{ github.event.inputs.user }}" == "mahesh" ]]; then
-            echo "gcp_dir=./terraform/gcp-mahesh" >> "$GITHUB_OUTPUT"
-            echo "do_dir=./terraform/digitalocean-mahesh" >> "$GITHUB_OUTPUT"
-            echo "gcp_project=concrete-detection-1-491711" >> "$GITHUB_OUTPUT"
-            echo "cluster_name=crack-detection-cluster" >> "$GITHUB_OUTPUT"
-            echo "cluster_zone=us-central1-a" >> "$GITHUB_OUTPUT"
-          else
-            echo "gcp_dir=./terraform/gcp" >> "$GITHUB_OUTPUT"
-            echo "do_dir=./terraform/digitalocean" >> "$GITHUB_OUTPUT"
-            echo "gcp_project=concrete-detection-8" >> "$GITHUB_OUTPUT"
-            echo "cluster_name=crack-detection-cluster" >> "$GITHUB_OUTPUT"
-            echo "cluster_zone=us-central1-a" >> "$GITHUB_OUTPUT"
-          fi
+#       - name: Resolve credentials and config
+#         id: config
+#         run: |
+#           if [[ "${{ github.event.inputs.user }}" == "mahesh" ]]; then
+#             echo "gcp_dir=./terraform/gcp-mahesh" >> "$GITHUB_OUTPUT"
+#             echo "do_dir=./terraform/digitalocean-mahesh" >> "$GITHUB_OUTPUT"
+#             echo "gcp_project=concrete-detection-1-491711" >> "$GITHUB_OUTPUT"
+#             echo "cluster_name=crack-detection-cluster" >> "$GITHUB_OUTPUT"
+#             echo "cluster_zone=us-central1-a" >> "$GITHUB_OUTPUT"
+#           else
+#             echo "gcp_dir=./terraform/gcp" >> "$GITHUB_OUTPUT"
+#             echo "do_dir=./terraform/digitalocean" >> "$GITHUB_OUTPUT"
+#             echo "gcp_project=concrete-detection-8" >> "$GITHUB_OUTPUT"
+#             echo "cluster_name=crack-detection-cluster" >> "$GITHUB_OUTPUT"
+#             echo "cluster_zone=us-central1-a" >> "$GITHUB_OUTPUT"
+#           fi
 
-      - name: Set working directory
-        id: setdir
-        run: |
-          if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
-            echo "dir=${{ steps.config.outputs.gcp_dir }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "dir=${{ steps.config.outputs.do_dir }}" >> "$GITHUB_OUTPUT"
-          fi
+#       - name: Set working directory
+#         id: setdir
+#         run: |
+#           if [[ "${{ github.event.inputs.provider }}" == "gcp" ]]; then
+#             echo "dir=${{ steps.config.outputs.gcp_dir }}" >> "$GITHUB_OUTPUT"
+#           else
+#             echo "dir=${{ steps.config.outputs.do_dir }}" >> "$GITHUB_OUTPUT"
+#           fi
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.0
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.7.0
 
-      - name: Authenticate to GCP (mahesh)
-        if: ${{ github.event.inputs.provider == 'gcp' && github.event.inputs.user == 'mahesh' }}
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}
+#       - name: Authenticate to GCP (mahesh)
+#         if: ${{ github.event.inputs.provider == 'gcp' && github.event.inputs.user == 'mahesh' }}
+#         uses: google-github-actions/auth@v2
+#         with:
+#           credentials_json: ${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}
 
-      - name: Authenticate to GCP (normal)
-        if: ${{ github.event.inputs.provider == 'gcp' && github.event.inputs.user == 'normal' }}
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_CD_2_SA_KEY }}
+#       - name: Authenticate to GCP (normal)
+#         if: ${{ github.event.inputs.provider == 'gcp' && github.event.inputs.user == 'normal' }}
+#         uses: google-github-actions/auth@v2
+#         with:
+#           credentials_json: ${{ secrets.GCP_CD_2_SA_KEY }}
 
-      - name: Set GCP Project
-        if: ${{ github.event.inputs.provider == 'gcp' }}
-        run: |
-          gcloud config set project ${{ steps.config.outputs.gcp_project }}
+#       - name: Set GCP Project
+#         if: ${{ github.event.inputs.provider == 'gcp' }}
+#         run: |
+#           gcloud config set project ${{ steps.config.outputs.gcp_project }}
 
-      - name: Terraform Init (mahesh)
-        if: ${{ github.event.inputs.user == 'mahesh' }}
-        run: |
-          if [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
-            terraform init -input=false \
-              -backend-config="access_key=${{ secrets.MAHESH_DO_ACCESS_KEY_ID }}" \
-              -backend-config="secret_key=${{ secrets.MAHESH_DO_SECRET_ACCESS_KEY }}"
-          else
-            terraform init -input=false
-          fi
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Init (mahesh)
+#         if: ${{ github.event.inputs.user == 'mahesh' }}
+#         run: |
+#           if [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
+#             terraform init -input=false \
+#               -backend-config="access_key=${{ secrets.MAHESH_DO_ACCESS_KEY_ID }}" \
+#               -backend-config="secret_key=${{ secrets.MAHESH_DO_SECRET_ACCESS_KEY }}"
+#           else
+#             terraform init -input=false
+#           fi
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Terraform Init (normal)
-        if: ${{ github.event.inputs.user == 'normal' }}
-        run: |
-          if [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
-            terraform init -input=false \
-              -backend-config="access_key=${{ secrets.ACCESS_KEY_ID }}" \
-              -backend-config="secret_key=${{ secrets.SECRET_ACCESS_KEY }}"
-          else
-            terraform init -input=false
-          fi
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Init (normal)
+#         if: ${{ github.event.inputs.user == 'normal' }}
+#         run: |
+#           if [[ "${{ github.event.inputs.provider }}" == "digitalocean" ]]; then
+#             terraform init -input=false \
+#               -backend-config="access_key=${{ secrets.ACCESS_KEY_ID }}" \
+#               -backend-config="secret_key=${{ secrets.SECRET_ACCESS_KEY }}"
+#           else
+#             terraform init -input=false
+#           fi
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Validate
+#         run: terraform validate
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Terraform Plan
-        run: |
-          if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-            terraform plan -out=tfplan
-          else
-            terraform plan -destroy -out=tfplan
-          fi
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Plan
+#         run: |
+#           if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+#             terraform plan -out=tfplan
+#           else
+#             terraform plan -destroy -out=tfplan
+#           fi
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Apply
+#         run: terraform apply -auto-approve tfplan
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Output cluster connect command
-        if: ${{ github.event.inputs.action == 'apply' && github.event.inputs.provider == 'gcp' }}
-        run: |
-          echo "============================================"
-          echo "  GKE Cluster Connect Command"
-          echo "============================================"
-          echo "gcloud container clusters get-credentials ${{ steps.config.outputs.cluster_name }} --zone ${{ steps.config.outputs.cluster_zone }} --project ${{ steps.config.outputs.gcp_project }}"
-          echo "============================================"
+#       - name: Output cluster connect command
+#         if: ${{ github.event.inputs.action == 'apply' && github.event.inputs.provider == 'gcp' }}
+#         run: |
+#           echo "============================================"
+#           echo "  GKE Cluster Connect Command"
+#           echo "============================================"
+#           echo "gcloud container clusters get-credentials ${{ steps.config.outputs.cluster_name }} --zone ${{ steps.config.outputs.cluster_zone }} --project ${{ steps.config.outputs.gcp_project }}"
+#           echo "============================================"
 
-      - name: Delete global static IP
-        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
-        run: |
-          IP_NAME="concrete-detection-ip"
-          GCP_PROJECT="${{ steps.config.outputs.gcp_project }}"
-          echo "Checking if static IP '$IP_NAME' exists..."
-          EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
-          if [[ -n "$EXISTING_IP" ]]; then
-            echo "Deleting static IP '$IP_NAME' ($EXISTING_IP)..."
-            gcloud compute addresses delete $IP_NAME --global --project=$GCP_PROJECT --quiet
-            echo "Static IP deleted."
-          else
-            echo "Static IP '$IP_NAME' not found, nothing to delete."
-          fi
+#       - name: Delete global static IP
+#         if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
+#         run: |
+#           IP_NAME="concrete-detection-ip"
+#           GCP_PROJECT="${{ steps.config.outputs.gcp_project }}"
+#           echo "Checking if static IP '$IP_NAME' exists..."
+#           EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
+#           if [[ -n "$EXISTING_IP" ]]; then
+#             echo "Deleting static IP '$IP_NAME' ($EXISTING_IP)..."
+#             gcloud compute addresses delete $IP_NAME --global --project=$GCP_PROJECT --quiet
+#             echo "Static IP deleted."
+#           else
+#             echo "Static IP '$IP_NAME' not found, nothing to delete."
+#           fi
 
-      - name: Cleanup tfplan
-        if: always()
-        run: rm -f tfplan
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Cleanup tfplan
+#         if: always()
+#         run: rm -f tfplan
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-  provision-both:
-    name: Provision Both Clusters
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.provider == 'both' }}
-    strategy:
-      matrix:
-        provider: ["gcp", "digitalocean"]
-      fail-fast: false
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+#   provision-both:
+#     name: Provision Both Clusters
+#     runs-on: ubuntu-latest
+#     if: ${{ github.event.inputs.provider == 'both' }}
+#     strategy:
+#       matrix:
+#         provider: ["gcp", "digitalocean"]
+#       fail-fast: false
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v4
 
-      - name: Resolve credentials and config
-        id: config
-        run: |
-          if [[ "${{ github.event.inputs.user }}" == "mahesh" ]]; then
-            echo "gcp_dir=./terraform/gcp-mahesh" >> "$GITHUB_OUTPUT"
-            echo "do_dir=./terraform/digitalocean-mahesh" >> "$GITHUB_OUTPUT"
-            echo "gcp_project=concrete-detection-1-491711" >> "$GITHUB_OUTPUT"
-            echo "cluster_name=crack-detection-cluster" >> "$GITHUB_OUTPUT"
-            echo "cluster_zone=us-central1-a" >> "$GITHUB_OUTPUT"
-          else
-            echo "gcp_dir=./terraform/gcp" >> "$GITHUB_OUTPUT"
-            echo "do_dir=./terraform/digitalocean" >> "$GITHUB_OUTPUT"
-            echo "gcp_project=concrete-detection-8" >> "$GITHUB_OUTPUT"
-            echo "cluster_name=crack-detection-cluster" >> "$GITHUB_OUTPUT"
-            echo "cluster_zone=us-central1-a" >> "$GITHUB_OUTPUT"
-          fi
+#       - name: Resolve credentials and config
+#         id: config
+#         run: |
+#           if [[ "${{ github.event.inputs.user }}" == "mahesh" ]]; then
+#             echo "gcp_dir=./terraform/gcp-mahesh" >> "$GITHUB_OUTPUT"
+#             echo "do_dir=./terraform/digitalocean-mahesh" >> "$GITHUB_OUTPUT"
+#             echo "gcp_project=concrete-detection-1-491711" >> "$GITHUB_OUTPUT"
+#             echo "cluster_name=crack-detection-cluster" >> "$GITHUB_OUTPUT"
+#             echo "cluster_zone=us-central1-a" >> "$GITHUB_OUTPUT"
+#           else
+#             echo "gcp_dir=./terraform/gcp" >> "$GITHUB_OUTPUT"
+#             echo "do_dir=./terraform/digitalocean" >> "$GITHUB_OUTPUT"
+#             echo "gcp_project=concrete-detection-8" >> "$GITHUB_OUTPUT"
+#             echo "cluster_name=crack-detection-cluster" >> "$GITHUB_OUTPUT"
+#             echo "cluster_zone=us-central1-a" >> "$GITHUB_OUTPUT"
+#           fi
 
-      - name: Set working directory
-        id: setdir
-        run: |
-          if [[ "${{ matrix.provider }}" == "gcp" ]]; then
-            echo "dir=${{ steps.config.outputs.gcp_dir }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "dir=${{ steps.config.outputs.do_dir }}" >> "$GITHUB_OUTPUT"
-          fi
+#       - name: Set working directory
+#         id: setdir
+#         run: |
+#           if [[ "${{ matrix.provider }}" == "gcp" ]]; then
+#             echo "dir=${{ steps.config.outputs.gcp_dir }}" >> "$GITHUB_OUTPUT"
+#           else
+#             echo "dir=${{ steps.config.outputs.do_dir }}" >> "$GITHUB_OUTPUT"
+#           fi
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.0
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.7.0
 
-      - name: Authenticate to GCP (mahesh)
-        if: ${{ matrix.provider == 'gcp' && github.event.inputs.user == 'mahesh' }}
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}
+#       - name: Authenticate to GCP (mahesh)
+#         if: ${{ matrix.provider == 'gcp' && github.event.inputs.user == 'mahesh' }}
+#         uses: google-github-actions/auth@v2
+#         with:
+#           credentials_json: ${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}
 
-      - name: Authenticate to GCP (normal)
-        if: ${{ matrix.provider == 'gcp' && github.event.inputs.user == 'normal' }}
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_CD_2_SA_KEY }}
+#       - name: Authenticate to GCP (normal)
+#         if: ${{ matrix.provider == 'gcp' && github.event.inputs.user == 'normal' }}
+#         uses: google-github-actions/auth@v2
+#         with:
+#           credentials_json: ${{ secrets.GCP_CD_2_SA_KEY }}
 
-      - name: Set GCP Project
-        if: ${{ matrix.provider == 'gcp' }}
-        run: |
-          gcloud config set project ${{ steps.config.outputs.gcp_project }}
+#       - name: Set GCP Project
+#         if: ${{ matrix.provider == 'gcp' }}
+#         run: |
+#           gcloud config set project ${{ steps.config.outputs.gcp_project }}
 
-      - name: Terraform Init (mahesh)
-        if: ${{ github.event.inputs.user == 'mahesh' }}
-        run: |
-          if [[ "${{ matrix.provider }}" == "digitalocean" ]]; then
-            terraform init -input=false \
-              -backend-config="access_key=${{ secrets.MAHESH_DO_ACCESS_KEY_ID }}" \
-              -backend-config="secret_key=${{ secrets.MAHESH_DO_SECRET_ACCESS_KEY }}"
-          else
-            terraform init -input=false
-          fi
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Init (mahesh)
+#         if: ${{ github.event.inputs.user == 'mahesh' }}
+#         run: |
+#           if [[ "${{ matrix.provider }}" == "digitalocean" ]]; then
+#             terraform init -input=false \
+#               -backend-config="access_key=${{ secrets.MAHESH_DO_ACCESS_KEY_ID }}" \
+#               -backend-config="secret_key=${{ secrets.MAHESH_DO_SECRET_ACCESS_KEY }}"
+#           else
+#             terraform init -input=false
+#           fi
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Terraform Init (normal)
-        if: ${{ github.event.inputs.user == 'normal' }}
-        run: |
-          if [[ "${{ matrix.provider }}" == "digitalocean" ]]; then
-            terraform init -input=false \
-              -backend-config="access_key=${{ secrets.ACCESS_KEY_ID }}" \
-              -backend-config="secret_key=${{ secrets.SECRET_ACCESS_KEY }}"
-          else
-            terraform init -input=false
-          fi
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Init (normal)
+#         if: ${{ github.event.inputs.user == 'normal' }}
+#         run: |
+#           if [[ "${{ matrix.provider }}" == "digitalocean" ]]; then
+#             terraform init -input=false \
+#               -backend-config="access_key=${{ secrets.ACCESS_KEY_ID }}" \
+#               -backend-config="secret_key=${{ secrets.SECRET_ACCESS_KEY }}"
+#           else
+#             terraform init -input=false
+#           fi
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: DigitalOcean Auth (mahesh)
-        if: ${{ matrix.provider == 'digitalocean' && github.event.inputs.user == 'mahesh' }}
-        run: |
-          echo "TF_VAR_digitalocean_token=${{ secrets.MAHESH_DIGITALOCEAN_ACCESS_TOKEN }}" >> $GITHUB_ENV
+#       - name: DigitalOcean Auth (mahesh)
+#         if: ${{ matrix.provider == 'digitalocean' && github.event.inputs.user == 'mahesh' }}
+#         run: |
+#           echo "TF_VAR_digitalocean_token=${{ secrets.MAHESH_DIGITALOCEAN_ACCESS_TOKEN }}" >> $GITHUB_ENV
 
-      - name: DigitalOcean Auth (normal)
-        if: ${{ matrix.provider == 'digitalocean' && github.event.inputs.user == 'normal' }}
-        run: |
-          echo "TF_VAR_digitalocean_token=${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}" >> $GITHUB_ENV
+#       - name: DigitalOcean Auth (normal)
+#         if: ${{ matrix.provider == 'digitalocean' && github.event.inputs.user == 'normal' }}
+#         run: |
+#           echo "TF_VAR_digitalocean_token=${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}" >> $GITHUB_ENV
 
-      - name: Terraform Validate
-        run: terraform validate
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Validate
+#         run: terraform validate
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Terraform Plan
-        run: |
-          if [ "${{ github.event.inputs.action }}" == "apply" ]; then
-            terraform plan -out=tfplan
-          else
-            terraform plan -destroy -out=tfplan
-          fi
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Plan
+#         run: |
+#           if [ "${{ github.event.inputs.action }}" == "apply" ]; then
+#             terraform plan -out=tfplan
+#           else
+#             terraform plan -destroy -out=tfplan
+#           fi
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Terraform Apply
+#         run: terraform apply -auto-approve tfplan
+#         working-directory: ${{ steps.setdir.outputs.dir }}
 
-      - name: Output cluster connect command
-        if: ${{ github.event.inputs.action == 'apply' && matrix.provider == 'gcp' }}
-        run: |
-          echo "============================================"
-          echo "  GKE Cluster Connect Command"
-          echo "============================================"
-          echo "gcloud container clusters get-credentials ${{ steps.config.outputs.cluster_name }} --zone ${{ steps.config.outputs.cluster_zone }} --project ${{ steps.config.outputs.gcp_project }}"
-          echo "============================================"
+#       - name: Output cluster connect command
+#         if: ${{ github.event.inputs.action == 'apply' && matrix.provider == 'gcp' }}
+#         run: |
+#           echo "============================================"
+#           echo "  GKE Cluster Connect Command"
+#           echo "============================================"
+#           echo "gcloud container clusters get-credentials ${{ steps.config.outputs.cluster_name }} --zone ${{ steps.config.outputs.cluster_zone }} --project ${{ steps.config.outputs.gcp_project }}"
+#           echo "============================================"
 
-      - name: Delete global static IP
-        if: ${{ github.event.inputs.action == 'destroy' && matrix.provider == 'gcp' }}
-        run: |
-          IP_NAME="concrete-detection-ip"
-          GCP_PROJECT="${{ steps.config.outputs.gcp_project }}"
-          echo "Checking if static IP '$IP_NAME' exists..."
-          EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
-          if [[ -n "$EXISTING_IP" ]]; then
-            echo "Deleting static IP '$IP_NAME' ($EXISTING_IP)..."
-            gcloud compute addresses delete $IP_NAME --global --project=$GCP_PROJECT --quiet
-            echo "Static IP deleted."
-          else
-            echo "Static IP '$IP_NAME' not found, nothing to delete."
-          fi
+#       - name: Delete global static IP
+#         if: ${{ github.event.inputs.action == 'destroy' && matrix.provider == 'gcp' }}
+#         run: |
+#           IP_NAME="concrete-detection-ip"
+#           GCP_PROJECT="${{ steps.config.outputs.gcp_project }}"
+#           echo "Checking if static IP '$IP_NAME' exists..."
+#           EXISTING_IP=$(gcloud compute addresses describe $IP_NAME --global --project=$GCP_PROJECT --format="value(address)" 2>/dev/null || true)
+#           if [[ -n "$EXISTING_IP" ]]; then
+#             echo "Deleting static IP '$IP_NAME' ($EXISTING_IP)..."
+#             gcloud compute addresses delete $IP_NAME --global --project=$GCP_PROJECT --quiet
+#             echo "Static IP deleted."
+#           else
+#             echo "Static IP '$IP_NAME' not found, nothing to delete."
+#           fi
 
-      - name: Cleanup tfplan
-        if: always()
-        run: rm -f tfplan
-        working-directory: ${{ steps.setdir.outputs.dir }}
+#       - name: Cleanup tfplan
+#         if: always()
+#         run: rm -f tfplan
+#         working-directory: ${{ steps.setdir.outputs.dir }}
