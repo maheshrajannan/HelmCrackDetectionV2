@@ -1,3 +1,16 @@
+# DEPRECATED — do not use in deploys (issue-62).
+#
+# This script mutated masterChart/charts/pv-chart/values.yaml on disk, which
+# dirtied the git tree (the committed `nfsCIP: 34.118.233.237` was its residue)
+# and coupled deploys to a writable checkout.
+#
+# Replaced by inline injection at deploy time:
+#   NFS_CIP=$(kubectl get svc nfs-server-svc-cip -o jsonpath='{.spec.clusterIP}')
+#   helm upgrade --install master-chart ./masterChart --set pv-chart.nfsCIP="$NFS_CIP"
+# or the preferred ansible/deploy-master-chart.yml playbook.
+#
+# Kept for reference only; no longer called by any workflow or script.
+
 import yaml
 import subprocess
 

@@ -41,10 +41,10 @@ All three share one NFS-backed PVC (`concrete-images-pvc-nfs`). Flow: upload pod
 
 - **GCE Ingress requires `NodePort` services** — a `ClusterIP` service will break load-balancer backend sync. `crack-detection-svc` is deliberately ClusterIP because it's internal-only (no ingress path).
 - **NFS server uses `emptyDir`**, not a persistent disk — uploaded images are **lost if the NFS pod restarts**.
-- **NFS ClusterIP injection**: the PV needs the NFS service ClusterIP. Three mechanisms exist, in order of currency:
-  1. `populateCIP.py` — **unused/legacy**, mutates `masterChart/charts/pv-chart/values.yaml` on disk (kept for reference only).
-  2. `runHelmCharts.sh` — still calls `populateCIP.py` then `helm install`.
-  3. `ansible/deploy-master-chart.yml` — **preferred**, discovers ClusterIP at deploy time and injects inline (`pv-chart.nfsCIP`), no file mutation.
+- **NFS ClusterIP injection**: the PV needs the NFS service ClusterIP. As of issue-62 all live paths discover it at deploy time and inject inline via `--set pv-chart.nfsCIP=$(kubectl get svc nfs-server-svc-cip -o jsonpath='{.spec.clusterIP}')` — no file mutation, committed `pv-chart/values.yaml` ships `nfsCIP: ""` and `pv.yaml` wraps it in `required` so a missing inject fails loudly.
+  1. `ansible/deploy-master-chart.yml` — **preferred**, discovers ClusterIP and injects inline.
+  2. `runHelmCharts.sh`, `MAHESH_DEPLOY-SSL-GKE.yaml`, `Mahesh-deploy-DOK.yaml` — discover + `--set` inline (no longer call `populateCIP.py`).
+  3. `populateCIP.py` — **DEPRECATED/legacy**, mutated `values.yaml` on disk; kept for reference only, no longer called by anything.
 - **`masterChart/Chart.yaml` lists only 4 deps** (`pv-chart`, `image-upload`, `crack-detection`, `concrete-image-gallery`) — `ingressChart` lives under `charts/` but is NOT wired as a dependency there; treat it as separately managed.
 - Apex domain `concretecrackgallery.online` → `34.8.140.102` is a **different, unmanaged** IP — not part of this stack.
 - Many parallel `Mahesh-*` vs non-prefixed workflows/terraform dirs exist. When fixing something, confirm **which variant** is actually in use before editing.

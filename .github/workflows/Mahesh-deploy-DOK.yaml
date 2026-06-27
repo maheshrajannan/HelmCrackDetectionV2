@@ -139,9 +139,14 @@ jobs:
       run: |
         helm upgrade --install nfs-server ./nfsServerChart
         sleep 3
-        python3 populateCIP.py
+        NFS_CIP=$(kubectl get svc nfs-server-svc-cip -o jsonpath='{.spec.clusterIP}')
+        if [[ -z "$NFS_CIP" ]]; then
+          echo "ERROR: could not discover nfs-server-svc-cip ClusterIP" >&2
+          exit 1
+        fi
+        echo "NFS ClusterIP: $NFS_CIP"
         sleep 3
-        helm upgrade --install master-chart ./masterChart
+        helm upgrade --install master-chart ./masterChart --set pv-chart.nfsCIP="$NFS_CIP"
         sleep 5
         
     - name: Retrieve Ingress LoadBalancer IP

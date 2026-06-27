@@ -8,5 +8,5 @@ spec:
   accessModes:
     - ReadWriteMany
   nfs:
-    server: {{ .Values.nfsCIP }}
+    server: {{ required "pv-chart.nfsCIP must be set at deploy time (discover from: kubectl get svc nfs-server-svc-cip -o jsonpath='{.spec.clusterIP}')" .Values.nfsCIP }}
     path: "/"

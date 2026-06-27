@@ -1,0 +1,65 @@
+---
+# deploy-master-chart.yml
+#
+# Modern replacement for populateCIP.py + the Helm portion of runHelmCharts.sh.
+#
+# Discovers the NFS server ClusterIP at deploy time and injects it inline via
+# `helm ... --set pv-chart.nfsCIP=<ip>`. Nothing is written back to the repo, so
+# the git tree stays clean and the committed pv-chart/values.yaml never needs a
+# real address.
+#
+# Prereqs: kubectl + helm on PATH, KUBECONFIG pointing at the target cluster,
+# and the nfs-server chart already installed (its Service must exist before the
+# ClusterIP can be discovered).
+#
+# Usage:
+#   ansible-playbook ansible/deploy-master-chart.yml
+#   # optional overrides:
+#   ansible-playbook ansible/deploy-master-chart.yml \
+#     -e chart_path=./masterChart -e release_name=master-chart \
+#     -e nfs_service=nfs-server-svc-cip -e namespace=default
+
+- name: Deploy master-chart with discovered NFS ClusterIP
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    chart_path: ./masterChart
+    release_name: master-chart
+    nfs_service: nfs-server-svc-cip
+    namespace: default
+
+  tasks:
+    - name: Discover NFS server ClusterIP
+      ansible.builtin.command:
+        cmd: >-
+          kubectl get svc {{ nfs_service }}
+          -n {{ namespace }}
+          -o jsonpath={.spec.clusterIP}
+      register: nfs_cip
+      changed_when: false
+
+    - name: Fail if NFS ClusterIP could not be discovered
+      ansible.builtin.fail:
+        msg: >-
+          Could not discover ClusterIP for service '{{ nfs_service }}' in
+          namespace '{{ namespace }}'. Is the nfs-server chart installed?
+      when: nfs_cip.stdout | trim | length == 0
+
+    - name: Show discovered NFS ClusterIP
+      ansible.builtin.debug:
+        msg: "NFS ClusterIP: {{ nfs_cip.stdout | trim }}"
+
+    - name: Install/upgrade master-chart with injected nfsCIP
+      ansible.builtin.command:
+        cmd: >-
+          helm upgrade --install {{ release_name }} {{ chart_path }}
+          -n {{ namespace }}
+          --set pv-chart.nfsCIP={{ nfs_cip.stdout | trim }}
+      register: helm_result
+      changed_when: "'STATUS: deployed' in helm_result.stdout"
+
+    - name: Show helm output
+      ansible.builtin.debug:
+        var: helm_result.stdout_lines
