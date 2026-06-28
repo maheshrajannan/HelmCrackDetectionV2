@@ -1,9 +1,15 @@
 terraform {
   backend "s3" {
+    # bucket is intentionally omitted here.
+    # Supply it at init time via backend.hcl:
+    #   terraform init \
+    #     -backend-config=backend.hcl \
+    #     -backend-config="access_key=<YOUR_SPACES_ACCESS_KEY>" \
+    #     -backend-config="secret_key=<YOUR_SPACES_SECRET_KEY>"
+    # Copy backend.hcl.example → backend.hcl and fill in your own bucket name.
     endpoints = {
       s3 = "https://nyc3.digitaloceanspaces.com"
     }
-    bucket                      = "terraform-crack-detection-1"
     key                         = "DO-cluster/terraform.tfstate"
     region                      = "us-east-1"
     skip_credentials_validation = true

@@ -1,0 +1,15 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# GCP Bootstrap – Terraform backend configuration
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Prerequisites – create the GCS bucket ONCE before the first init:
+#   gsutil mb -p <PROJECT_ID> gs://<YOUR_BUCKET_NAME>
+#   gsutil versioning set on gs://<YOUR_BUCKET_NAME>
+#
+# Usage:
+#   1. Copy this file: cp backend.hcl.example backend.hcl
+#   2. Fill in the values below (backend.hcl is gitignored).
+#   3. Run: terraform init -backend-config=backend.hcl
+# ──────────────────────────────────────────────────────────────────────────────
+
+bucket = "<YOUR_GCS_BUCKET_NAME>"

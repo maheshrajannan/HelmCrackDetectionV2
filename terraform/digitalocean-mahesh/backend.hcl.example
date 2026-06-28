@@ -1,0 +1,22 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# DigitalOcean cluster – Terraform backend configuration (DO Spaces / S3-compat)
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Prerequisites – create the Spaces bucket ONCE before the first init:
+#   doctl spaces create <YOUR_BUCKET_NAME> --region nyc3
+#   (or create it via the DigitalOcean web console)
+#
+# Usage:
+#   1. Copy this file: cp backend.hcl.example backend.hcl
+#   2. Fill in the bucket name below (backend.hcl is gitignored).
+#   3. Run:
+#        terraform init \
+#          -backend-config=backend.hcl \
+#          -backend-config="access_key=<YOUR_SPACES_ACCESS_KEY>" \
+#          -backend-config="secret_key=<YOUR_SPACES_SECRET_KEY>"
+#
+#   Spaces access/secret keys can be generated in the DO console under:
+#   API → Spaces Keys → Generate New Key
+# ──────────────────────────────────────────────────────────────────────────────
+
+bucket = "<YOUR_DO_SPACES_BUCKET_NAME>"
