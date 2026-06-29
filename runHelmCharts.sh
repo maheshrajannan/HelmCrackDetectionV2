@@ -17,15 +17,19 @@ sh buildConcreteGalleryImage.sh
 echo "Coming to root dir"
 cd ../..
 echo "Create nfs-server helm chart"
-helm install nfs-server ./nfsServerChart
+helm upgrade --install nfs-server ./nfsServerChart
 
 sleep 3
-echo "Run python file to populate Cluster-IP"
-python3 populateCIP.py
+NFS_CIP=$(kubectl get svc nfs-server-svc-cip -o jsonpath='{.spec.clusterIP}')
+if [[ -z "$NFS_CIP" ]]; then
+  echo "ERROR: could not discover nfs-server-svc-cip ClusterIP" >&2
+  exit 1
+fi
+echo "NFS ClusterIP: $NFS_CIP"
 sleep 3
 
 echo "Running the 4 child charts in master-chart"
-helm install master-chart ./masterChart
+helm upgrade --install master-chart ./masterChart --set pv-chart.nfsCIP="$NFS_CIP"
 
 
 echo "ImageUpload service."
