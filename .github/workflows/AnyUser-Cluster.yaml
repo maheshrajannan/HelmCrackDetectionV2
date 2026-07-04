@@ -278,6 +278,34 @@ jobs:
             echo "✅ All Volumes deleted"
           fi
 
+      # ==== Pre-destroy: clean up GCP LoadBalancers and NEGs via Kubernetes controllers & gcloud ====
+      - name: GKE Pre-Destroy Cleanup (GCP)
+        if: ${{ github.event.inputs.action == 'destroy' && github.event.inputs.provider == 'gcp' }}
+        run: |
+          echo "Connecting to GKE cluster..."
+          gcloud container clusters get-credentials "${{ github.event.inputs.cluster_name }}" --zone "${{ github.event.inputs.gcp_cluster_zone }}" --project "${{ github.event.inputs.gcp_project_id }}" || true
+          
+          echo "Uninstalling helm charts and deleting ingresses/services to trigger resource cleanup..."
+          helm list -A -q | xargs -I {} helm uninstall {} || true
+          kubectl delete ingress --all --all-namespaces || true
+          kubectl delete svc --all --all-namespaces --field-selector metadata.name!=kubernetes || true
+          
+          echo "⏳ Waiting 60s for GCP Load Balancers and NEGs to be cleanly deleted by controllers..."
+          sleep 60
+          
+          echo "Deleting any leftover NEGs..."
+          ZONE="${{ github.event.inputs.gcp_cluster_zone }}"
+          PROJECT="${{ github.event.inputs.gcp_project_id }}"
+          NEGS=$(gcloud compute network-endpoint-groups list --zone="$ZONE" --project="$PROJECT" --format="value(name)" 2>/dev/null || true)
+          if [[ -n "$NEGS" ]]; then
+            echo "Leftover NEGs found: $NEGS"
+            for NEG in $NEGS; do
+              # Try to delete associated backend service first if it exists
+              gcloud compute backend-services delete "$NEG" --global --quiet --project="$PROJECT" || true
+              gcloud compute network-endpoint-groups delete "$NEG" --zone="$ZONE" --quiet --project="$PROJECT" || true
+            done
+          fi
+
       # ==== Run Terraform destroy (plan was already created above) ====
       - name: Terraform Destroy
         if: ${{ github.event.inputs.action == 'destroy' }}
