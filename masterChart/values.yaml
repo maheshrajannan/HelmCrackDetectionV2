@@ -1,9 +1,8 @@
 global:
-  imageUploadImage: maheshrajannan/image-upload-logic:latest
-  crackDetectionImage: maheshrajannan/crack-detection-logic:latest
-  concreteGalleryImage: maheshrajannan/concrete-image-gallery-logic:latest
-
-
+  registry: docker_username
+  imageUploadImage: image-upload-logic:latest
+  crackDetectionImage: crack-detection-logic:latest
+  concreteGalleryImage: concrete-image-gallery-logic:latest
 
 concrete-image-gallery:
   labels:
@@ -18,7 +17,10 @@ image-upload:
     app: image-upload-pod
 
 
-# repositoryPrefix: maheshrajannan
+
+
+
+
 
 # images:
 #   image-upload-image:
