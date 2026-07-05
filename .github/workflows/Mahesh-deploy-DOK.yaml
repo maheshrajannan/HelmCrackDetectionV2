@@ -11,7 +11,7 @@ on:
         type: choice
         options:
           - DO-SSL
-          - feat/cert-manager-lets-encrypt-do
+          - feat/parameterize-do-dockerhub-org
       do_token:
         description: "[DO] DigitalOcean API token"
         required: true
