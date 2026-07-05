@@ -29,7 +29,7 @@ echo "NFS ClusterIP: $NFS_CIP"
 sleep 3
 
 echo "Running the 4 child charts in master-chart"
-helm upgrade --install master-chart ./masterChart --set pv-chart.nfsCIP="$NFS_CIP"
+helm upgrade --install master-chart ./masterChart --set pv-chart.nfsCIP="$NFS_CIP" --set global.registry="${DOCKER_USER_ID:-maheshrajannan}"
 
 
 echo "ImageUpload service."

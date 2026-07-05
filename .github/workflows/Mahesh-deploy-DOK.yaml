@@ -11,7 +11,7 @@ on:
         type: choice
         options:
           - DO-SSL
-          - feat/cert-manager-lets-encrypt-do
+          - feat/parameterize-do-dockerhub-org
       do_token:
         description: "[DO] DigitalOcean API token"
         required: true
@@ -141,7 +141,7 @@ jobs:
         sleep 3
         python3 populateCIP.py
         sleep 3
-        helm upgrade --install master-chart ./masterChart
+        helm upgrade --install master-chart ./masterChart --set global.registry="${{ secrets.MAHESH_DOCKER_USERNAME }}"
         sleep 5
         
     - name: Retrieve Ingress LoadBalancer IP

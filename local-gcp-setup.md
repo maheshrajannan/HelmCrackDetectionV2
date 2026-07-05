@@ -163,12 +163,11 @@ push your own:
 ```bash
 docker login                       # DockerHub creds (CI uses MAHESH_DOCKER_USERNAME/PASSWORD)
 cd buildConcreteDetection
-# build scripts read $DOCKER_USER_ID — set it to YOUR DockerHub org if not maheshrajannan
+# build scripts read $DOCKER_USER_ID — set it to YOUR DockerHub org if not maheshrajannan (defaults to maheshrajannan)
 export DOCKER_USER_ID=<your-dockerhub-user>
 ```
 
-If you change the DockerHub org, update `masterChart/values.yaml` `global.*Image`
-keys to match (they currently hardcode `maheshrajannan/...:latest`).
+If you change the DockerHub org, override the `global.registry` key in `masterChart/values.yaml` or use Helm's `--set global.registry=<your-dockerhub-user>` flag at deploy time.
 
 ---
 
