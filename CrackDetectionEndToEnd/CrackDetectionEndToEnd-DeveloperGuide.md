@@ -78,6 +78,8 @@ Two options:
    workflow still performs a DockerHub login, so you'll need valid DockerHub creds in secrets
    regardless.
 
+> **Note:** The Helm charts use `global.registry` (which defaults to `"$MAHESH_DOCKER_USERNAME"` in `masterChart/values.yaml`, and is overridden to `${{ secrets.MAHESH_DOCKER_USERNAME }}` in the workflows) to automatically prefix the images. You do not need to edit `masterChart/values.yaml` to specify your namespace unless you want to customize the image names themselves.
+
 ### 0.4 Create the GitHub Actions secrets
 
 In your fork: **Settings → Secrets and variables → Actions → New repository secret**. Create:
