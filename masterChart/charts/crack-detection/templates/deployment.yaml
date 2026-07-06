@@ -20,8 +20,8 @@ spec:
             claimName: concrete-images-pvc-nfs
       containers:
         - name: crack-detection-pod
-          image: "{{ .Values.global.crackDetectionImage }}"
-          imagePullPolicy: Always
+          image: "{{ if contains "/" .Values.global.crackDetectionImage }}{{ .Values.global.crackDetectionImage }}{{ else }}{{ .Values.global.registry }}/{{ .Values.global.crackDetectionImage }}{{ end }}"
+          imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: "/app/uploads/images"
               name: concrete-images-pv-nfs

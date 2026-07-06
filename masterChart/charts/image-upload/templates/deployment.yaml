@@ -20,11 +20,11 @@ spec:
             claimName: concrete-images-pvc-nfs
       containers:
         - name: image-upload-pod
-          image: "{{ .Values.global.imageUploadImage }}"
-          imagePullPolicy: Always
+          image: "{{ if contains "/" .Values.global.imageUploadImage }}{{ .Values.global.imageUploadImage }}{{ else }}{{ .Values.global.registry }}/{{ .Values.global.imageUploadImage }}{{ end }}"
+          imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: "/app/uploads/images"
-              name: concrete-images-pv-nfs      
+              name: concrete-images-pv-nfs
           ports:
           - containerPort: 8080
 
