@@ -8,10 +8,7 @@ on:
         description: 'Branch to deploy'
         required: true
         default: 'DO-SSL'
-        type: choice
-        options:
-          - DO-SSL
-          - feat/parameterize-do-dockerhub-org
+        type: string
       do_token:
         description: "[DO] DigitalOcean API token"
         required: true
@@ -80,9 +77,8 @@ jobs:
       run: |
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-    # Install NGINX Ingress Controller if on DO-SSL branch
+    # Install NGINX Ingress Controller
     - name: Install NGINX Ingress Controller
-      if: github.event.inputs.branch == 'DO-SSL'
       run: |
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
         helm repo update
@@ -102,7 +98,6 @@ jobs:
     
     # ✅ Wait for NGINX Ingress Controller to be Ready
     - name: Wait for NGINX Admission Webhook to be Ready
-      if: github.event.inputs.branch == 'DO-SSL'
       run: |
         kubectl rollout status deployment ingress-nginx-controller --timeout=120s
         kubectl wait --for=condition=available deployment/ingress-nginx-controller \
@@ -110,7 +105,6 @@ jobs:
     
     # ✅ Wait for LoadBalancer IP to be provisioned
     - name: Wait for NGINX LoadBalancer IP
-      if: github.event.inputs.branch == 'DO-SSL'
       run: |
         for i in {1..60}; do
           IP=$(kubectl get svc ingress-nginx-controller -o jsonpath="{.status.loadBalancer.ingress[0].ip}")
@@ -162,7 +156,6 @@ jobs:
         exit 1
 
     - name: Update DNS Records with Ingress IP
-      if: github.event.inputs.branch == 'DO-SSL'
       env:
         DIGITALOCEAN_TOKEN: ${{ secrets.MAHESH_DIGITALOCEAN_ACCESS_TOKEN }}
         DOMAIN: "mahesh.concretecrackgallery.in"
