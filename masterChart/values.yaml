@@ -1,5 +1,5 @@
 global:
-  registry: docker_username
+  registry: "$MAHESH_DOCKER_USERNAME"
   imageUploadImage: image-upload-logic:latest
   crackDetectionImage: crack-detection-logic:latest
   concreteGalleryImage: concrete-image-gallery-logic:latest
