@@ -51,11 +51,31 @@ jobs:
         username: ${{ secrets.MAHESH_DOCKER_USERNAME }}
         password: ${{ secrets.MAHESH_DOCKER_PASSWORD }}
 
+    - name: Resolve Docker Image Tag
+      id: resolve_tag
+      run: |
+        INPUT_TAG="${{ github.event.inputs.image_tag }}"
+        if [[ "$INPUT_TAG" == "latest" || -z "$INPUT_TAG" ]]; then
+          echo "Resolving latest semantic tag from Docker Hub..."
+          REPO="${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic"
+          TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${REPO}:pull" | jq -r .token)
+          TAGS=$(curl -s -H "Authorization: Bearer $TOKEN" "https://registry-1.docker.io/v2/${REPO}/tags/list" | jq -r '.tags[]' 2>/dev/null || true)
+          LATEST_TAG=$(echo "$TAGS" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [[ -z "$LATEST_TAG" ]]; then
+            LATEST_TAG="latest"
+          fi
+          echo "Resolved tag: $LATEST_TAG"
+          echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+        else
+          echo "Using specified tag: $INPUT_TAG"
+          echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Verify Docker images exist
       run: |
-        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:${{ github.event.inputs.image_tag }} > /dev/null
-        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:${{ github.event.inputs.image_tag }} > /dev/null
-        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:${{ github.event.inputs.image_tag }} > /dev/null
+        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:${{ steps.resolve_tag.outputs.tag }} > /dev/null
+        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:${{ steps.resolve_tag.outputs.tag }} > /dev/null
+        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:${{ steps.resolve_tag.outputs.tag }} > /dev/null
 
     # Set up doctl (DigitalOcean CLI)
     - name: Install doctl
@@ -137,9 +157,9 @@ jobs:
         sleep 3
         helm upgrade --install master-chart ./masterChart \
           --set global.registry="${{ secrets.MAHESH_DOCKER_USERNAME }}" \
-          --set global.imageUploadImage="image-upload-logic:${{ github.event.inputs.image_tag }}" \
-          --set global.crackDetectionImage="crack-detection-logic:${{ github.event.inputs.image_tag }}" \
-          --set global.concreteGalleryImage="concrete-image-gallery-logic:${{ github.event.inputs.image_tag }}"
+          --set global.imageUploadImage="image-upload-logic:${{ steps.resolve_tag.outputs.tag }}" \
+          --set global.crackDetectionImage="crack-detection-logic:${{ steps.resolve_tag.outputs.tag }}" \
+          --set global.concreteGalleryImage="concrete-image-gallery-logic:${{ steps.resolve_tag.outputs.tag }}"
         sleep 5
         
     - name: Retrieve Ingress LoadBalancer IP
