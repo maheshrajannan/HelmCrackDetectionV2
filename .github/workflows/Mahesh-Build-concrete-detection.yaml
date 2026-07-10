@@ -32,17 +32,17 @@ jobs:
     - name: Build and Push Image Upload Logic
       run: |
         cd buildConcreteDetection/imageUpload
-        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:${{ github.event.inputs.image_tag || 'latest' }} .
-        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:${{ github.event.inputs.image_tag || 'latest' }}
+        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:${{ inputs.image_tag || 'latest' }} .
+        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:${{ inputs.image_tag || 'latest' }}
 
     - name: Build and Push Crack Detection Logic
       run: |
         cd buildConcreteDetection/crackDetection
-        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:${{ github.event.inputs.image_tag || 'latest' }} .
-        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:${{ github.event.inputs.image_tag || 'latest' }}
+        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:${{ inputs.image_tag || 'latest' }} .
+        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:${{ inputs.image_tag || 'latest' }}
 
     - name: Build and Push Concrete Image Gallery Logic
       run: |
         cd buildConcreteDetection/concreteImageGallery
-        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:${{ github.event.inputs.image_tag || 'latest' }} .
-        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:${{ github.event.inputs.image_tag || 'latest' }}
+        docker build -f dockerfile -t ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:${{ inputs.image_tag || 'latest' }} .
+        docker push ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:${{ inputs.image_tag || 'latest' }}
