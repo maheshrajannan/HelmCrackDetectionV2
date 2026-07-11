@@ -18,9 +18,9 @@ on:
         required: true
         type: string
       image_tag:
-        description: 'Docker image tag (immutable tag or digest)'
+        description: 'Docker image tag to deploy (set to "auto" to automatically deploy the latest version tag, e.g. 0.0.3)'
         required: true
-        default: 'latest'
+        default: 'auto'
         type: string
 
 jobs:
@@ -55,7 +55,7 @@ jobs:
       id: resolve_tag
       run: |
         INPUT_TAG="${{ github.event.inputs.image_tag }}"
-        if [[ "$INPUT_TAG" == "latest" || -z "$INPUT_TAG" ]]; then
+        if [[ "$INPUT_TAG" == "latest" || "$INPUT_TAG" == "auto" || -z "$INPUT_TAG" ]]; then
           echo "Resolving latest semantic tag from Docker Hub..."
           REPO="${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic"
           TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${REPO}:pull" | jq -r .token)
