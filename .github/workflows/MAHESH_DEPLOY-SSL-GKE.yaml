@@ -21,6 +21,11 @@ on:
         description: "[GCP] GCP project ID"
         required: true
         type: string
+      image_tag:
+        description: 'Docker image tag (immutable tag or digest)'
+        required: true
+        default: 'latest'
+        type: string
 
 jobs:
   GKE-SSL-deploy-concrete-detection:
@@ -40,6 +45,7 @@ jobs:
         echo "  gcp_cluster_name: ${{ github.event.inputs.gcp_cluster_name }}"
         echo "  gcp_cluster_zone: ${{ github.event.inputs.gcp_cluster_zone }}"
         echo "  gcp_sa_key_base64: ${{ github.event.inputs.gcp_sa_key_base64 != '' && '*** provided ***' || 'NOT provided' }}"
+        echo "  image_tag       : ${{ github.event.inputs.image_tag }}"
         echo "================================================"
 
     - name: Log in to DockerHub
@@ -48,17 +54,31 @@ jobs:
         username: ${{ secrets.MAHESH_DOCKER_USERNAME }}
         password: ${{ secrets.MAHESH_DOCKER_PASSWORD }}
 
-    - name: Pull Image Upload Logic
+    - name: Resolve Docker Image Tag
+      id: resolve_tag
       run: |
-        docker pull ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:latest
+        INPUT_TAG="${{ github.event.inputs.image_tag }}"
+        if [[ "$INPUT_TAG" == "latest" || -z "$INPUT_TAG" ]]; then
+          echo "Resolving latest semantic tag from Docker Hub..."
+          REPO="${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic"
+          TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${REPO}:pull" | jq -r .token)
+          TAGS=$(curl -s -H "Authorization: Bearer $TOKEN" "https://registry-1.docker.io/v2/${REPO}/tags/list" | jq -r '.tags[]' 2>/dev/null || true)
+          LATEST_TAG=$(echo "$TAGS" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [[ -z "$LATEST_TAG" ]]; then
+            LATEST_TAG="latest"
+          fi
+          echo "Resolved tag: $LATEST_TAG"
+          echo "tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+        else
+          echo "Using specified tag: $INPUT_TAG"
+          echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+        fi
 
-    - name: Pull Crack Detection Logic
+    - name: Verify Docker images exist
       run: |
-        docker pull ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:latest
-
-    - name: Pull Concrete Image Gallery Logic
-      run: |
-        docker pull ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:latest
+        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:${{ steps.resolve_tag.outputs.tag }} > /dev/null
+        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/crack-detection-logic:${{ steps.resolve_tag.outputs.tag }} > /dev/null
+        docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/concrete-image-gallery-logic:${{ steps.resolve_tag.outputs.tag }} > /dev/null
 
     - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
@@ -114,7 +134,12 @@ jobs:
           exit 1
         fi
         echo "NFS ClusterIP: $NFS_CIP"
-        helm upgrade --install master-chart ./masterChart --set pv-chart.nfsCIP="$NFS_CIP" --set global.registry="${{ secrets.MAHESH_DOCKER_USERNAME }}"
+        helm upgrade --install master-chart ./masterChart \
+          --set pv-chart.nfsCIP="$NFS_CIP" \
+          --set global.registry="${{ secrets.MAHESH_DOCKER_USERNAME }}" \
+          --set global.imageUploadImage="image-upload-logic:${{ steps.resolve_tag.outputs.tag }}" \
+          --set global.crackDetectionImage="crack-detection-logic:${{ steps.resolve_tag.outputs.tag }}" \
+          --set global.concreteGalleryImage="concrete-image-gallery-logic:${{ steps.resolve_tag.outputs.tag }}"
         sleep 5
         
     - name: Wait for Ingress IP & Create/Update Cloud DNS A Record
