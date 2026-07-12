@@ -29,6 +29,14 @@ jobs:
         REPO="${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic"
         TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${REPO}:pull" | jq -r .token)
         TAGS=$(curl -s -H "Authorization: Bearer $TOKEN" "https://registry-1.docker.io/v2/${REPO}/tags/list" | jq -r '.tags[]' 2>/dev/null || true)
+        LATEST_TAG=$(echo "$TAGS" | grep -E '^do-[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+        if [[ -z "$LATEST_TAG" ]]; then
+          NEXT_TAG="do-0.0.1"
+        else
+          VERSION_PART="${LATEST_TAG#do-}"
+          IFS='.' read -r major minor patch <<< "$VERSION_PART"
+          next_patch=$((patch + 1))
+          NEXT_TAG="do-${major}.${minor}.${next_patch}"
         LATEST_TAG=$(echo "$TAGS" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
         if [[ -z "$LATEST_TAG" ]]; then
           NEXT_TAG="0.0.1"
