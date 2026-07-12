@@ -71,6 +71,15 @@ jobs:
           echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
         fi
 
+    - name: Validate DO Image Tag
+      run: |
+        RESOLVED_TAG="${{ steps.resolve_tag.outputs.tag }}"
+        echo "Validating tag: $RESOLVED_TAG"
+        if [[ "$RESOLVED_TAG" =~ ^gcp- ]]; then
+          echo "::error::Deploying a GCP image tag ($RESOLVED_TAG) to DigitalOcean is not allowed!"
+          exit 1
+        fi
+
     - name: Verify Docker images exist
       run: |
         docker manifest inspect ${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic:${{ steps.resolve_tag.outputs.tag }} > /dev/null
