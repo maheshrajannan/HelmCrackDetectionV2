@@ -37,6 +37,13 @@ jobs:
           IFS='.' read -r major minor patch <<< "$VERSION_PART"
           next_patch=$((patch + 1))
           NEXT_TAG="do-${major}.${minor}.${next_patch}"
+        LATEST_TAG=$(echo "$TAGS" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+        if [[ -z "$LATEST_TAG" ]]; then
+          NEXT_TAG="0.0.1"
+        else
+          IFS='.' read -r major minor patch <<< "$LATEST_TAG"
+          next_patch=$((patch + 1))
+          NEXT_TAG="${major}.${minor}.${next_patch}"
         fi
         echo "Resolved tag: $NEXT_TAG"
         echo "tag=$NEXT_TAG" >> "$GITHUB_OUTPUT"
