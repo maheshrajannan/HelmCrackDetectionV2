@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - DO-SSL
-      - differentiate-tags-do-build
   workflow_dispatch: # Enables manual trigger from the GitHub Actions tab
 jobs:
   build-and-push:
