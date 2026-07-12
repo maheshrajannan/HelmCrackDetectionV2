@@ -2,6 +2,11 @@ name: Mahesh DO LitmusChaos Install
 
 on:
   workflow_dispatch:
+    inputs:
+      do_token:
+        description: "[DO] DigitalOcean API token"
+        required: true
+        type: string
 
 jobs:
   install-litmus-chaos:
@@ -20,7 +25,7 @@ jobs:
 
       - name: Authenticate with DigitalOcean
         run: |
-          doctl auth init -t ${{ secrets.MAHESH_DIGITALOCEAN_ACCESS_TOKEN }}
+          doctl auth init -t ${{ github.event.inputs.do_token }}
 
       # Configure kubectl to connect to the DOKS cluster
       - name: Configure kubectl

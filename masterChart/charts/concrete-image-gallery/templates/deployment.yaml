@@ -22,7 +22,7 @@ spec:
             claimName: concrete-images-pvc-nfs
       containers:
         - name: concrete-image-gallery-pod
-          image: "{{ .Values.global.concreteGalleryImage }}"
+          image: "{{ if contains "/" .Values.global.concreteGalleryImage }}{{ .Values.global.concreteGalleryImage }}{{ else }}{{ .Values.global.registry }}/{{ .Values.global.concreteGalleryImage }}{{ end }}"
           imagePullPolicy: Always
           volumeMounts:
             - mountPath: "/app/uploads/images"

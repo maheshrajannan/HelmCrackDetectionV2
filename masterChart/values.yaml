@@ -1,7 +1,8 @@
 global:
-  imageUploadImage: maheshrajannan/image-upload-logic:latest
-  crackDetectionImage: maheshrajannan/crack-detection-logic:latest
-  concreteGalleryImage: maheshrajannan/concrete-image-gallery-logic:latest
+  registry: "$MAHESH_DOCKER_USERNAME"
+  imageUploadImage: image-upload-logic:latest
+  crackDetectionImage: crack-detection-logic:latest
+  concreteGalleryImage: concrete-image-gallery-logic:latest
 
 concrete-image-gallery:
   labels:
@@ -20,7 +21,6 @@ image-upload:
 
 
 
-# repositoryPrefix: empower9090
 
 # images:
 #   image-upload-image:

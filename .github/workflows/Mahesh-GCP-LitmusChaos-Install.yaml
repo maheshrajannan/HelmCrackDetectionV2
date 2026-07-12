@@ -1,7 +1,12 @@
-name: Mahesh LitmusChaos Install 
+name: Mahesh GCP LitmusChaos Install 
 
 on:
   workflow_dispatch:
+    inputs:
+      gcp_sa_key_base64:
+        description: "GCP SA key base64 single-line. Linux: base64 -w 0 key.json | Mac: base64 -i key.json | tr -d '\\n'"
+        required: true
+        type: string
 
 jobs:
   install-litmus-chaos:
@@ -18,9 +23,12 @@ jobs:
           version: 'latest'
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.MAHESH_GCP_CD_2_SA_KEY }}
+        env:
+          GCP_SA_KEY_BASE64: ${{ github.event.inputs.gcp_sa_key_base64 }}
+        run: |
+          echo "$GCP_SA_KEY_BASE64" | tr -d '\n' | base64 -d > $HOME/gcp-key.json
+          gcloud auth activate-service-account --key-file=$HOME/gcp-key.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/gcp-key.json" >> $GITHUB_ENV
 
       - name: Install gke-gcloud-auth-plugin
         run: |
@@ -31,7 +39,6 @@ jobs:
           gcloud container clusters get-credentials ${{ secrets.MAHESH_GKE_CLUSTER_NAME }} \
             --zone ${{ secrets.MAHESH_GKE_CLUSTER_ZONE }} \
             --project ${{ secrets.MAHESH_GCP_PROJECT_ID }}
-
       - name: Install Helm
         run: |
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash

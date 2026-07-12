@@ -7,3 +7,18 @@
 
 # Credentials - but NOT blocking .tf files
 **/gha-creds-*.json
+keys
+keys/*
+
+# Video files
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.flv
+*.wmv
+*.m4v
+*.mpg
+*.mpeg
+*.3gp
