@@ -60,7 +60,7 @@ jobs:
           REPO="${{ secrets.MAHESH_DOCKER_USERNAME }}/image-upload-logic"
           TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${REPO}:pull" | jq -r .token)
           TAGS=$(curl -s -H "Authorization: Bearer $TOKEN" "https://registry-1.docker.io/v2/${REPO}/tags/list" | jq -r '.tags[]' 2>/dev/null || true)
-          LATEST_TAG=$(echo "$TAGS" | grep -E '^2\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+          LATEST_TAG=$(echo "$TAGS" | grep -E '^do-[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
           if [[ -z "$LATEST_TAG" ]]; then
             LATEST_TAG="latest"
           fi
@@ -69,6 +69,15 @@ jobs:
         else
           echo "Using specified tag: $INPUT_TAG"
           echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Validate DO Image Tag
+      run: |
+        RESOLVED_TAG="${{ steps.resolve_tag.outputs.tag }}"
+        echo "Validating tag: $RESOLVED_TAG"
+        if [[ "$RESOLVED_TAG" =~ ^gcp- ]]; then
+          echo "::error::Deploying a GCP image tag ($RESOLVED_TAG) to DigitalOcean is not allowed!"
+          exit 1
         fi
 
     - name: Verify Docker images exist
